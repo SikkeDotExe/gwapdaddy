@@ -1,3 +1,17 @@
+--[[
+                          /$$                                                                   
+                      | $$                                                                   
+ /$$$$$$$   /$$$$$$  /$$$$$$       /$$$$$$   /$$$$$$   /$$$$$$   /$$$$$$   /$$$$$$   /$$$$$$ 
+| $$__  $$ /$$__  $$|_  $$_/      /$$__  $$ /$$__  $$ |____  $$ /$$__  $$ /$$__  $$ /$$__  $$
+| $$  \ $$| $$$$$$$$  | $$       | $$  \__/| $$$$$$$$  /$$$$$$$| $$  \ $$| $$$$$$$$| $$  \__/
+| $$  | $$| $$_____/  | $$ /$$   | $$      | $$_____/ /$$__  $$| $$  | $$| $$_____/| $$      
+| $$  | $$|  $$$$$$$  |  $$$$//$$| $$      |  $$$$$$$|  $$$$$$$| $$$$$$$/|  $$$$$$$| $$      
+|__/  |__/ \_______/   \___/ |__/|__/       \_______/ \_______/| $$____/  \_______/|__/      
+                                                               | $$                          
+                                                               | $$                          
+                                                               |__/                           
+]]
+
 -- Libraries
 util.require_natives(1676318796)
 
@@ -24,13 +38,14 @@ if not status then
 end
 if auto_updater == true then error("Invalid auto-updater lib. Please delete your Stand/Lua Scripts/lib/auto-updater.lua and try again") end
 
-auto_updater.run_auto_update({
-    source_url="https://raw.githubusercontent.com/SikkeDotExe/gwapdaddy/main/NET_REAPER.lua",
-    script_relpath=SCRIPT_RELPATH,
-    verify_file_begins_with="--"
-})
+if not IN_DEV then
+    auto_updater.run_auto_update({
+        source_url="https://raw.githubusercontent.com/MyUsername/MyProjectName/main/MyScriptName.lua",
+        script_relpath=SCRIPT_RELPATH,
+        verify_file_begins_with="--"
+    })
+end
 
--- Script
 local PLAYERS_LIST
 local PLAYERS_COUNT
 local IS_CLOSING = false
@@ -490,6 +505,15 @@ NET = {
             0,
             51826,
             5827,
+        },
+
+        VEHICLE = {
+            ROCKET = {"voltic2","scramjet","vigilante"},
+            SUPER = {"adder","entityxf","nero2","t20","thrax"},
+            MOTO = {"deathbike2","manchez","faggio","oppressor","oppressor2","reever","bati","sanchez"},
+            PLANE = {"strikeforce","cargoplane2","raiju","hydra","luxor2","lazer","pyro","seabreeze","microlight","molotok","vestra"},
+            HELI = {"akula","anihilator2","buzzard","hunter","havok","savage","valkyrie","swift2"},
+            MILITARY = {"apc","rhino","khanjali","thruster","nightshark","riot2","riot"},
         },
     },
 
@@ -1232,10 +1256,10 @@ NET = {
                         menu.trigger_commands("spoofedhosttoken 0000000000000000")
                         menu.trigger_commands("hosttokenspoofing on")
                         menu.trigger_commands("playermagnet 30")
-                        menu.trigger_commands("go newpublic")
+                        menu.trigger_commands("go public")
                     end
                 elseif players.get_host() == players.user() and #players.list() < 2 then
-                    menu.trigger_commands("go newpublic")
+                    menu.trigger_commands("go public")
                 end
             end
         end,
@@ -1904,17 +1928,6 @@ NET = {
                 end
             end
         end,
-
-        GIFT_VEHICLE = function(player_id)
-            local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
-            local vehicle = PED.GET_VEHICLE_PED_IS_IN(ped, false)
-            ENTITY.SET_ENTITY_AS_MISSION_ENTITY(vehicle, true, true)
-            DECORATOR.DECOR_REGISTER("PV_Slot", 3)
-            DECORATOR.DECOR_REGISTER("Player_Vehicle", 3)
-            DECORATOR.DECOR_SET_BOOL(vehicle, "IgnoredByQuickSave", false)
-            DECORATOR.DECOR_SET_INT(vehicle, "Player_Vehicle", NETWORK.NETWORK_HASH_FROM_PLAYER_HANDLE(player_id))
-            VEHICLE.SET_VEHICLE_IS_STOLEN(vehicle, false)
-        end,
     },
 
     PROFILE = {}, -- Menu Profiles
@@ -1992,10 +2005,11 @@ NET = {
         menu.toggle_loop(NEUTRAL_LIST, "Ghost Player", {""}, "Ghosts the selected player.", function() NETWORK.SET_REMOTE_PLAYER_AS_GHOST(player_id, true) end, function() NETWORK.SET_REMOTE_PLAYER_AS_GHOST(player_id, false) end)
         menu.toggle(NEUTRAL_LIST, "Fake Money Drop", {""}, "", function(Enabled) NET.COMMAND.FAKE_MONEY_DROP(player_id, Enabled) end)
         local FRIENDLY_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Friendly")
+        local SPAWN_VEHICLE_LIST = menu.list(FRIENDLY_LIST, "Spawn Vehicle") for i, types in pairs(NET.TABLE.VEHICLE) do local LIST = menu.list(SPAWN_VEHICLE_LIST, tostring(i)) for j, k in pairs(types) do menu.action(LIST, "Spawn - "..tostring(k), {}, "", function() menu.trigger_commands("as "..players.get_name(player_id).." "..k) end) end end
         menu.toggle_loop(FRIENDLY_LIST, "RP Drop", {}, "Will give rp until player is level 120.", function() NET.COMMAND.GIVE_PLAYER_RP(player_id, 0) end)
         menu.toggle(FRIENDLY_LIST, "Money Drop", {}, "Limited money drop, must be close to player for it to work best.", function(Enabled) NET.COMMAND.MONEY_DROP_PLAYER(player_id, Enabled) end)
         menu.action(FRIENDLY_LIST, "Give All Collectibles", {}, "Up to $300k.", function() menu.trigger_commands("givecollectibles"..players.get_name(player_id)) end)
-        menu.action(FRIENDLY_LIST, "Gift Vehicle", {}, "Make sure the player you're gifting the vehicle to enters an owned full garage.\nThis option will work on the vehicle the player is driving.", function(player_id) NET.COMMAND.GIFT_VEHICLE(player_id) end)
+        menu.action(FRIENDLY_LIST, "Gift Spawned Vehicle", {}, "", function() menu.trigger_commands("gift"..players.get_name(player_id)) end)
         menu.toggle(FRIENDLY_LIST, "Helpful Events", {""}, "Never Wanted, Off The Radar, Vehicle God, Auto-Heal.", function(Enabled) NET.COMMAND.HELPFUL_EVENTS(player_id, Enabled) end)
         menu.action(FRIENDLY_LIST, "Fix Loading Screen", {"fix"}, "Useful when stuck in a loading screen.", function() NET.COMMAND.FIX_LOADING_SCREEN(player_id) end)
         menu.action(FRIENDLY_LIST, "Reduce Loading Time", {""}, "Attempts to help the player by giving them script host.", function() NET.COMMAND.GIVE_SCRIPT_HOST(player_id) end)
@@ -2100,7 +2114,7 @@ menu.action(HOST_LIST, "Become Host", {}, "", NET.COMMAND.BECOME_HOST)
 menu.divider(HOST_LIST, "Script Host")
 menu.toggle_loop(HOST_LIST, "Script Host Addict", {}, "Gatekeep script host with all of your might.", NET.COMMAND.BECOME_SCRIPT_HOST)
 menu.action(HOST_LIST, "Become Script Host", {""}, "", NET.COMMAND.BECOME_SCRIPT_HOST)
-menu.action(SESSION_LIST, "Server Hop", {}, "", function() menu.trigger_commands("playermagnet 30") menu.trigger_commands("go newpublic") end)
+menu.action(SESSION_LIST, "Server Hop", {}, "", function() menu.trigger_commands("playermagnet 30") menu.trigger_commands("go public") end)
 menu.action(SESSION_LIST, "Rejoin", {}, "", function() menu.trigger_commands("rejoin") end)
 local UNSTUCK_LIST = menu.list(SESSION_LIST, "Unstuck", {}, "Every methods to get unstuck.")
 menu.action(UNSTUCK_LIST, "Abort Transition", {}, "", function() menu.trigger_commands("aborttransition") end)
@@ -2158,3 +2172,5 @@ util.create_tick_handler(function()
     NET.VARIABLE.Current_Car = entities.get_user_vehicle_as_handle(false)
     util.yield(1000)
 end) 
+
+util.keep_running()
