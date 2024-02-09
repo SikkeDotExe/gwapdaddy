@@ -40,7 +40,7 @@ if auto_updater == true then error("Invalid auto-updater lib. Please delete your
 
 if not IN_DEV then
     auto_updater.run_auto_update({
-        source_url="https://raw.githubusercontent.com/MyUsername/MyProjectName/main/MyScriptName.lua",
+        source_url="https://raw.githubusercontent.com/SikkeDotExe/gwapdaddy/main/NET_REAPER.lua",
         script_relpath=SCRIPT_RELPATH,
         verify_file_begins_with="--"
     })
