@@ -1957,17 +1957,6 @@ NET = {
             end
             util.stop_thread()
         end)
-        --[[
-            MODDED EVENT
-            (S3)
-            {0: 1450115979, 1: 16, 2: 2097152}
-
-            (SA) -- 2, 3, 11, | Doesnt change
-            {0: -642704387, 1: 16, 2: 2097152, 3: 782258655, 4: -345121748, 5: -1843768720, 6: -1736840549, 7: -525937562, 8: -1698401700, 9: -636934661, 10: -1204525798, 11: 21, 12: -296292909, 13: 649616346, 14: -1799648362}
-
-            (S8) -- Only 3 changes
-            {0: -1986344798, 1: 16, 2: 2097152, 3: 1441003728, 4: 0, 5: 0}
-        ]]
 
         menu.toggle(NET.PROFILE[tostring(player_id)].Menu, "Pacify", {}, "Blocked by most menus, will also most likely ruin the player's scripts.", function(Enabled) NET.COMMAND.PACIFY_PLAYER(player_id, Enabled) end)
         local MODERATE_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Moderate")
@@ -1994,7 +1983,7 @@ NET = {
         local TROLLING_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Trolling")
         menu.divider(TROLLING_LIST, "Unblockable & Undetected")
         menu.toggle_loop(TROLLING_LIST, "Smokescreen", {""}, "Fills up their screen with black smoke.", function() NET.COMMAND.SMOKESCREEN_PLAYER(player_id) end, function() local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id) GRAPHICS.REMOVE_PARTICLE_FX(ptfx) STREAMING.REMOVE_NAMED_PTFX_ASSET("scr_as_trans") end)
-        menu.toggle_loop(TROLLING_LIST, "Launch Player", {""}, "Works on most menus.", function() NET.COMMAND.LAUNCH_PLAYER(player_id) end, function() if veh ~= 0 and ENTITY.DOES_ENTITY_EXIST(veh) then entities.delete(veh) end end)
+        menu.toggle_loop(TROLLING_LIST, "Launch Player", {""}, "", function() NET.COMMAND.LAUNCH_PLAYER(player_id) end, function() if veh ~= 0 and ENTITY.DOES_ENTITY_EXIST(veh) then entities.delete(veh) end end)
         menu.toggle_loop(TROLLING_LIST, "Stumble Player", {""}, "", function() NET.COMMAND.STUMBLE_PLAYER(player_id) end)
         local PROP_GLITCH_LIST = menu.list(TROLLING_LIST, "Prop Glitch Loop")
         menu.list_select(PROP_GLITCH_LIST, "Object", {""}, "Object to glitch the player.", NET.TABLE.GLITCH_OBJECT.NAME, 1, function(index) NET.VARIABLE.Object_Hash = util.joaat(NET.TABLE.GLITCH_OBJECT.OBJECT[index]) end)
@@ -2002,14 +1991,14 @@ NET = {
         menu.toggle(PROP_GLITCH_LIST, "Glitch player", {}, "", function(toggled) NET.COMMAND.GLITCH_PLAYER(player_id, toggled) end)
         local NEUTRAL_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Neutral")
         menu.toggle(NEUTRAL_LIST, "Spectate", {}, "", function(Enabled) NET.COMMAND.SPECTATE_PLAYER(player_id, Enabled) end)
-        menu.toggle_loop(NEUTRAL_LIST, "Ghost Player", {""}, "Ghosts the selected player.", function() NETWORK.SET_REMOTE_PLAYER_AS_GHOST(player_id, true) end, function() NETWORK.SET_REMOTE_PLAYER_AS_GHOST(player_id, false) end)
+        menu.toggle_loop(NEUTRAL_LIST, "Ghost Player", {""}, "", function() NETWORK.SET_REMOTE_PLAYER_AS_GHOST(player_id, true) end, function() NETWORK.SET_REMOTE_PLAYER_AS_GHOST(player_id, false) end)
         menu.toggle(NEUTRAL_LIST, "Fake Money Drop", {""}, "", function(Enabled) NET.COMMAND.FAKE_MONEY_DROP(player_id, Enabled) end)
         local FRIENDLY_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Friendly")
         local SPAWN_VEHICLE_LIST = menu.list(FRIENDLY_LIST, "Spawn Vehicle") for i, types in pairs(NET.TABLE.VEHICLE) do local LIST = menu.list(SPAWN_VEHICLE_LIST, tostring(i)) for j, k in pairs(types) do menu.action(LIST, "Spawn - "..tostring(k), {}, "", function() menu.trigger_commands("as "..players.get_name(player_id).." "..k) end) end end
         menu.toggle_loop(FRIENDLY_LIST, "RP Drop", {}, "Will give rp until player is level 120.", function() NET.COMMAND.GIVE_PLAYER_RP(player_id, 0) end)
-        menu.toggle(FRIENDLY_LIST, "Money Drop", {}, "Limited money drop, must be close to player for it to work best.", function(Enabled) NET.COMMAND.MONEY_DROP_PLAYER(player_id, Enabled) end)
-        menu.action(FRIENDLY_LIST, "Give All Collectibles", {}, "Up to $300k.", function() menu.trigger_commands("givecollectibles"..players.get_name(player_id)) end)
-        menu.action(FRIENDLY_LIST, "Gift Spawned Vehicle", {}, "", function() menu.trigger_commands("gift"..players.get_name(player_id)) end)
+        menu.toggle(FRIENDLY_LIST, "Money Drop", {}, "Limited money drop, must be close to player.", function(Enabled) NET.COMMAND.MONEY_DROP_PLAYER(player_id, Enabled) end)
+        menu.action(FRIENDLY_LIST, "Give All Collectibles", {}, "Up to $300k.\nCan only be used once per player.", function() menu.trigger_commands("givecollectibles"..players.get_name(player_id)) end)
+        menu.action(FRIENDLY_LIST, "Gift Spawned Vehicle", {}, "Spawn fully tuned deathbike2 for best results.\nPlayer must have full garage.\nGifts the latest spawned car.", function() menu.trigger_commands("gift"..players.get_name(player_id)) end)
         menu.toggle(FRIENDLY_LIST, "Helpful Events", {""}, "Never Wanted, Off The Radar, Vehicle God, Auto-Heal.", function(Enabled) NET.COMMAND.HELPFUL_EVENTS(player_id, Enabled) end)
         menu.action(FRIENDLY_LIST, "Fix Loading Screen", {"fix"}, "Useful when stuck in a loading screen.", function() NET.COMMAND.FIX_LOADING_SCREEN(player_id) end)
         menu.action(FRIENDLY_LIST, "Reduce Loading Time", {""}, "Attempts to help the player by giving them script host.", function() NET.COMMAND.GIVE_SCRIPT_HOST(player_id) end)
@@ -2019,7 +2008,7 @@ NET = {
         menu.action(TELEPORT_LIST, "Teleport Into Their Vehicle", {""}, "", function() menu.trigger_commands("tpveh"..players.get_name(player_id)) end)
         menu.action(TELEPORT_LIST, "Teleport To Casino", {""}, "", function() menu.trigger_commands("casinotp"..players.get_name(player_id)) end)
         menu.toggle(NET.PROFILE[tostring(player_id)].Menu, "Block Traffic", {}, "Stops exchanging data with player.", function(Enabled) local TargetName = players.get_name(player_id) if Enabled then menu.trigger_commands("timeout"..TargetName.." on") else menu.trigger_commands("timeout"..TargetName.." off") end end)
-        menu.action(NET.PROFILE[tostring(player_id)].Menu, "Delete", {}, "Glitched?", function() NET.PROFILE[tostring(player_id)].Menu:delete() end)
+        menu.action(NET.PROFILE[tostring(player_id)].Menu, "Delete", {}, "Delete the label if the player isn't in the session anymore.", function() NET.PROFILE[tostring(player_id)].Menu:delete() end)
     end,
     --SAVE_NET_PROFILE = function() end, -- ???
     REMOVE_NET_PROFILE = function(player_id)
@@ -2096,7 +2085,7 @@ menu.toggle(MODERATE_PLAYERS_LIST, "Block Modders From Joining", {""}, "Recommen
 local RECOVERY_PLAYERS_LIST = menu.list(ALL_PLAYERS_LIST, "Recovery")
 menu.toggle_loop(RECOVERY_PLAYERS_LIST, "RP Loop", {"rplobby"}, "Will level up players until level 120.", NET.COMMAND.GIVE_PLAYERS_RP)
 menu.toggle(RECOVERY_PLAYERS_LIST, "Freebies", {"bless"}, "Handout freebies.", NET.COMMAND.FREEBIES)
-menu.toggle(RECOVERY_PLAYERS_LIST, "Rig Casino", {}, "Rig casino for everyone!", NET.COMMAND.RIG_CASINO)
+menu.toggle(RECOVERY_PLAYERS_LIST, "Rig Casino", {}, "HOW TO USE:\nStay inside casino.\nPlayers must have casino membership to earn alot.\nBlackjack: Stand if number is high, double down if low.\nRoulette: Max bet on Red 1 and Max Bet on Red 1st 12.", NET.COMMAND.RIG_CASINO)
 menu.toggle(RECOVERY_PLAYERS_LIST, "Money Drop", {}, "Drops figurines on nearby players.", NET.COMMAND.MONEY_DROP)
 local TELEPORT_PLAYERS_LIST = menu.list(ALL_PLAYERS_LIST, "Teleport")
 menu.toggle(TELEPORT_PLAYERS_LIST, "Ignore Interior", {}, "Will ignore players who are inside an interior.", function(Enabled) NET.VARIABLE.Ignore_Interior = Enabled end)
