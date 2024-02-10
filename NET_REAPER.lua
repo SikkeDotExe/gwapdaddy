@@ -93,8 +93,6 @@ NET = {
         Commands_Enabled = false,
         Commands_Default_Prefix = ";",
         Commands_Prefix = Commands_Default_Prefix,
-
-        Current_Car = 0,
     },
 
     TABLE = {
@@ -418,7 +416,8 @@ NET = {
             CRASH = {
                 {1, "[NET] Express"},
                 {2, "[NET] Dynamite"},
-                {3, "[STAND] Elegant"}
+                {3, "[STAND] Elegant"},
+                {4, "[NET] Mortar"},
             },
         },
 
@@ -864,6 +863,20 @@ NET = {
                 menu.trigger_commands("footlettuce"..TargetName)
                 if players.get_vehicle_model(player_id) then
                     menu.trigger_commands("slaughter"..TargetName)
+                end
+            end,
+
+            MORTAR = function(player_id)
+                for next = 1, #NET.TABLE.CRASH_OBJECT do
+                    if players.exists(player_id) then
+                    local Current_Object_Hash = util.joaat(NET.TABLE.CRASH_OBJECT[next])
+                    util.request_model(Current_Object_Hash)
+                    local Current_Object = entities.create_object(Current_Object_Hash, players.get_position(player_id))
+                    util.yield(100)
+                    entities.delete_by_handle(Current_Object)
+                    else
+                        break
+                    end
                 end
             end,
 
@@ -1417,7 +1430,6 @@ NET = {
                     elseif NET.VARIABLE.Kick_Method == 2 then -- Eviction Notice
                         NET.COMMAND.KICK.EVICTION_NOTICE(ToKick[next])
                     elseif NET.VARIABLE.Kick_Method == 3 then -- Aggressive
-                        util.toast("fired")
                         NET.COMMAND.KICK.AGGRESSIVE(ToKick[next])
                     elseif NET.VARIABLE.Kick_Method == 4 then -- Host Kick / Votekick
                         menu.trigger_commands("hostkick"..PlayerName)
@@ -1920,10 +1932,11 @@ NET = {
         end,
 
         RAINBOW_HEADLIGHTS = function(Enabled)
-            if NET.VARIABLE.Current_Car ~= 0 then 
-                VEHICLE.TOGGLE_VEHICLE_MOD(NET.VARIABLE.Current_Car, 22, true)
+            local Current_Car = entities.get_user_vehicle_as_handle(false)
+            if entities.Current_Car ~= 0 then 
+                VEHICLE.TOGGLE_VEHICLE_MOD(Current_Car, 22, true)
                 for i=1, 12 do
-                    VEHICLE.SET_VEHICLE_XENON_LIGHT_COLOR_INDEX(NET.VARIABLE.Current_Car, i)  
+                    VEHICLE.SET_VEHICLE_XENON_LIGHT_COLOR_INDEX(Current_Car, i)  
                     util.yield(200)
                 end
             end
@@ -1939,6 +1952,9 @@ NET = {
         NET.VARIABLE.Players_Count = NET.VARIABLE.Players_Count + 1
         NET.PROFILE[tostring(player_id)] = {}
         NET.PROFILE[tostring(player_id)].Menu = menu.list(PLAYERS_LIST, players.get_name(player_id), {}, "")
+
+        local MenuBuffer = NET.PROFILE[tostring(player_id)].Menu
+
         util.create_thread(function()
             while true do
                 if IS_CLOSING or not players.exists(player_id) then break end
@@ -1969,6 +1985,7 @@ NET = {
         menu.action(KICK_OPTIONS, "[STAND] Wrath Kick", {"wkick"}, "Will try to get host to kick target if available. If not, will try everything to get rid of the target.", function() NET.COMMAND.KICK.WRATH(player_id) end)
         local CRASH_OPTIONS = menu.list(MODERATE_LIST, "Crashes")
         menu.divider(CRASH_OPTIONS, "Modern Crashes")
+        menu.action(CRASH_OPTIONS, "[NET] Mortar Crash", {""}, "Blocked by popular menus.", function() NET.COMMAND.CRASH.MORTAR(player_id) end)
         menu.action(CRASH_OPTIONS, "[STAND] 2Take1 Crash", {"2t1crash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH["2TAKE1"](player_id) end)
         menu.action(CRASH_OPTIONS, "[STAND] Warhead Crash", {"warcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.WARHEAD(player_id) end)
         menu.action(CRASH_OPTIONS, "[NET] Express Crash", {"xcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.EXPRESS(player_id) end) -- (S3)
@@ -2008,7 +2025,7 @@ NET = {
         menu.action(TELEPORT_LIST, "Teleport Into Their Vehicle", {""}, "", function() menu.trigger_commands("tpveh"..players.get_name(player_id)) end)
         menu.action(TELEPORT_LIST, "Teleport To Casino", {""}, "", function() menu.trigger_commands("casinotp"..players.get_name(player_id)) end)
         menu.toggle(NET.PROFILE[tostring(player_id)].Menu, "Block Traffic", {}, "Stops exchanging data with player.", function(Enabled) local TargetName = players.get_name(player_id) if Enabled then menu.trigger_commands("timeout"..TargetName.." on") else menu.trigger_commands("timeout"..TargetName.." off") end end)
-        menu.action(NET.PROFILE[tostring(player_id)].Menu, "Delete", {}, "Delete the label if the player isn't in the session anymore.", function() NET.PROFILE[tostring(player_id)].Menu:delete() end)
+        menu.action(NET.PROFILE[tostring(player_id)].Menu, "Delete", {}, "Delete the label if the player isn't in the session anymore.", function() MenuBuffer:delete() end)
     end,
     --SAVE_NET_PROFILE = function() end, -- ???
     REMOVE_NET_PROFILE = function(player_id)
@@ -2066,7 +2083,7 @@ menu.list_select(WORLD_LIST, "Stations", {}, "", NET.TABLE.RADIO.NAME, 1, functi
 menu.toggle_loop(WORLD_LIST, "Toggle Radio", {}, "Networked", function() NET.COMMAND.TOGGLE_RADIO() end, function() if NET.VARIABLE.Party_Bus ~= nil then entities.delete_by_handle(NET.VARIABLE.Party_Bus) NET.VARIABLE.Party_Bus = nil end end)
 menu.toggle_loop(WORLD_LIST, "Laser Show", {}, "Networked", NET.COMMAND.LASER_SHOW)
 local PROTECTION_LIST = menu.list(SELF_LIST, "Protections")
-menu.toggle_loop(PROTECTION_LIST, "Anti Tow-Truck", {}, "", function() if PED.IS_PED_IN_ANY_VEHICLE(players.user_ped()) then VEHICLE.DETACH_VEHICLE_FROM_ANY_TOW_TRUCK(NET.VARIABLE.Current_Car) end end)
+menu.toggle_loop(PROTECTION_LIST, "Anti Tow-Truck", {}, "", function() if PED.IS_PED_IN_ANY_VEHICLE(players.user_ped()) then VEHICLE.DETACH_VEHICLE_FROM_ANY_TOW_TRUCK(entities.get_user_vehicle_as_handle(false)) end end)
 PLAYERS_LIST = menu.list(menu.my_root(), "Players")
 menu.list_select(PLAYERS_LIST, "Target", {}, "", NET.TABLE.METHOD.PLAYER, 1, function(Value) NET.VARIABLE.Players_To_Affect = Value NET.CREATE_NET_PROFILES_SPECIFIC() end)
 menu.toggle(PLAYERS_LIST, "Ignore Host", {}, "Great option if you don't want to get host kicked.", function(Enabled) NET.VARIABLE.Ignore_Host = Enabled end)
@@ -2158,7 +2175,6 @@ util.create_tick_handler(function()
     NET.FUNCTION.UPDATE_MENU()
     NET.FUNCTION.CHECK_FOR_2TAKE1()
     if NET.VARIABLE.No_Modders_Session then NET.FUNCTION.KICK_MODDERS() end
-    NET.VARIABLE.Current_Car = entities.get_user_vehicle_as_handle(false)
     util.yield(1000)
 end) 
 
