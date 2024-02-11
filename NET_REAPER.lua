@@ -12,84 +12,11 @@
                                                                |__/                           
 ]]
 
+local IN_DEV = true
+
 -- Libraries
 util.require_natives(1676318796)
-
--- Intro
-function newTimer()
-	local self = {start = util.current_time_millis()}
-	local function reset()
-		self.start = util.current_time_millis()
-	end
-	local function elapsed()
-		return util.current_time_millis() - self.start
-	end
-	return
-	{
-		reset = reset,
-		elapsed = elapsed
-	}
-end
-
-local state = 0
-local timer <const> = newTimer()
-local scaleform = GRAPHICS.REQUEST_SCALEFORM_MOVIE("OPENING_CREDITS")
-util.create_tick_handler(function()
-    function HIDE(scaleform)
-        GRAPHICS.BEGIN_SCALEFORM_MOVIE_METHOD(scaleform, "HIDE")
-        GRAPHICS.BEGIN_TEXT_COMMAND_SCALEFORM_STRING("STRING")
-        HUD.ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME("presents")
-        GRAPHICS.END_TEXT_COMMAND_SCALEFORM_STRING()
-        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_FLOAT(0.16)
-        GRAPHICS.END_SCALEFORM_MOVIE_METHOD()
-    end
-
-    function SETUP_SINGLE_LINE(scaleform)
-        GRAPHICS.BEGIN_SCALEFORM_MOVIE_METHOD(scaleform, "SETUP_SINGLE_LINE")
-        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_TEXTURE_NAME_STRING("presents")
-        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_FLOAT(0.5)
-        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_FLOAT(0.5)
-        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_FLOAT(70.0)
-        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_FLOAT(125.0)
-        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_TEXTURE_NAME_STRING("left")
-        GRAPHICS.END_SCALEFORM_MOVIE_METHOD()
-    end
-
-    function ADD_TEXT_TO_SINGLE_LINE(scaleform, text, font, colour)
-        GRAPHICS.BEGIN_SCALEFORM_MOVIE_METHOD(scaleform, "ADD_TEXT_TO_SINGLE_LINE")
-        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_TEXTURE_NAME_STRING("presents")
-        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_TEXTURE_NAME_STRING(text)
-        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_TEXTURE_NAME_STRING(font)
-        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_TEXTURE_NAME_STRING(colour)
-        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_BOOL(true)
-        GRAPHICS.END_SCALEFORM_MOVIE_METHOD()
-    end
-
-    if not GRAPHICS.HAS_SCALEFORM_MOVIE_LOADED(scaleform) then
-        return
-    end
-    if state == 0 then
-        SETUP_SINGLE_LINE(scaleform)
-        ADD_TEXT_TO_SINGLE_LINE(scaleform, "NET.REAPER", "$font1.9", "HUD_COLOUR_WHITE")
-        ADD_TEXT_TO_SINGLE_LINE(scaleform, "V2", "$font1.9", "HUD_COLOUR_RED")
-        GRAPHICS.BEGIN_SCALEFORM_MOVIE_METHOD(scaleform, "SHOW_SINGLE_LINE")
-        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_TEXTURE_NAME_STRING("presents")
-        GRAPHICS.END_SCALEFORM_MOVIE_METHOD()
-        GRAPHICS.BEGIN_SCALEFORM_MOVIE_METHOD(scaleform, "SHOW_CREDIT_BLOCK")
-        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_TEXTURE_NAME_STRING("presents")
-        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_FLOAT(0.5)
-        GRAPHICS.END_SCALEFORM_MOVIE_METHOD()
-        state = 1
-        timer.reset()
-    end
-    if timer.elapsed() >= 6000 and state == 1 then
-        HIDE(scaleform)
-        state = 2
-        timer.reset()
-    end
-
-    GRAPHICS.DRAW_SCALEFORM_MOVIE_FULLSCREEN(scaleform, 255, 255, 255, 255, 0)
-end)
+require "lib.net.Intro"
 
 -- Auto Update
 local status, auto_updater = pcall(require, "auto-updater")
@@ -118,7 +45,10 @@ if not IN_DEV then
     auto_updater.run_auto_update({
         source_url="https://raw.githubusercontent.com/SikkeDotExe/gwapdaddy/main/NET_REAPER.lua",
         script_relpath=SCRIPT_RELPATH,
-        verify_file_begins_with="--"
+        verify_file_begins_with="--",
+        dependencies = {
+
+        },
     })
 end
 
@@ -163,6 +93,7 @@ NET = {
 
         Block_Modders = false,
         No_Modders_Session = false,
+        Spectate_Loop = false,
 
         Ignore_Interior = false,
 
@@ -2353,21 +2284,23 @@ NET = {
         end,
 
         PUNISH_SPECTATORS = function()
-            for players.list_except() as player_id do
-                local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
-                local vehicle = PED.GET_VEHICLE_PED_IS_USING(ped)
-                local cam_dist = v3.distance(players.get_position(players.user()), players.get_cam_pos(player_id))
-                local pedDistance = v3.distance(players.get_position(players.user()), players.get_position(player_id))
-                local spectateTarget = players.get_spectate_target(player_id)
-                local driver = NETWORK.NETWORK_GET_PLAYER_INDEX_FROM_PED(VEHICLE.GET_PED_IN_VEHICLE_SEAT(vehicle, -1))
-                if NET.FUNCTION.IS_NET_PLAYER_OK(player_id, true, true) then
-                    if PED.IS_PED_IN_ANY_VEHICLE(ped) and driver == player_id then
-                        return
-                    end
-                    if cam_dist < 15.0 and pedDistance > 50.0 and not NET.FUNCTION.IS_SPECTATING(player_id) and spectateTarget == -1 and not NETWORK.NETWORK_IS_PLAYER_IN_MP_CUTSCENE(player_id) or spectateTarget == players.user()  then
-                        util.toast(players.get_name(player_id).." is spectating you.")
-                        menu.trigger_commands("timeout"..players.get_name(player_id).." on")
-                        break
+            if NET.VARIABLE.Spectate_Loop then
+                for players.list_except() as player_id do
+                    local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
+                    local vehicle = PED.GET_VEHICLE_PED_IS_USING(ped)
+                    local cam_dist = v3.distance(players.get_position(players.user()), players.get_cam_pos(player_id))
+                    local pedDistance = v3.distance(players.get_position(players.user()), players.get_position(player_id))
+                    local spectateTarget = players.get_spectate_target(player_id)
+                    local driver = NETWORK.NETWORK_GET_PLAYER_INDEX_FROM_PED(VEHICLE.GET_PED_IN_VEHICLE_SEAT(vehicle, -1))
+                    if NET.FUNCTION.IS_NET_PLAYER_OK(player_id, true, true) then
+                        if PED.IS_PED_IN_ANY_VEHICLE(ped) and driver == player_id then
+                            return
+                        end
+                        if cam_dist < 15.0 and pedDistance > 50.0 and not NET.FUNCTION.IS_SPECTATING(player_id) and spectateTarget == -1 and not NETWORK.NETWORK_IS_PLAYER_IN_MP_CUTSCENE(player_id) or spectateTarget == players.user()  then
+                            util.toast(players.get_name(player_id).." is spectating you.")
+                            menu.trigger_commands("timeout"..players.get_name(player_id).." on")
+                            break
+                        end
                     end
                 end
             end
@@ -2498,9 +2431,8 @@ NET = {
     end,
 }
 
-local Title = menu.divider(menu.my_root(), "NET.REAPER V2")
-
 -- Main Options
+local Title = menu.divider(menu.my_root(), "NET.REAPER V2")
 local SELF_LIST = menu.list(menu.my_root(), "Self")
 menu.toggle_loop(SELF_LIST, "Vanity Particles", {}, "", function(Enabled)
     local PTFX = {"scr_sum2_hal_hunted_respawn", "scr_sum2_hal_rider_weak_blue", "scr_sum2_hal_rider_weak_green", "scr_sum2_hal_rider_weak_orange", "scr_sum2_hal_rider_weak_greyblack"}
@@ -2529,7 +2461,13 @@ menu.toggle_loop(WORLD_LIST, "Toggle Radio", {}, "Networked", function() NET.COM
 menu.toggle_loop(WORLD_LIST, "Laser Show", {}, "Networked", NET.COMMAND.LASER_SHOW)
 local PROTECTION_LIST = menu.list(SELF_LIST, "Protections")
 menu.toggle_loop(PROTECTION_LIST, "Anti Tow-Truck", {}, "", function() if PED.IS_PED_IN_ANY_VEHICLE(players.user_ped()) then VEHICLE.DETACH_VEHICLE_FROM_ANY_TOW_TRUCK(entities.get_user_vehicle_as_handle(false)) end end)
-menu.toggle(PROTECTION_LIST, "Anti Spectator", {}, "You will stand still on the other player's screen.", function(Enabled) spectatorloop = Enabled while true do if not spectatorloop then break end NET.COMMAND.PUNISH_SPECTATORS() util.yield(1000) end end)
+menu.toggle(PROTECTION_LIST, "Anti Spectator", {}, "You will stand still on the other player's screen.", function(Enabled) NET.VARIABLE.Spectate_Loop = Enabled end)
+ENTITY_THROTTLER_LIST = menu.list(PROTECTION_LIST, "Entity Throttler", {}, "Great anti object crash & anti ferris wheel troll.") pcall(require("lib.net.Throttler"))
+local SELF_RECOVERY_LIST = menu.list(SELF_LIST, "Recovery")
+SLOTBOT_LIST = menu.list(SELF_RECOVERY_LIST, "[SAFE] Slotbot") pcall(require("lib.net.SlotBot"))
+MONEY_LIST = menu.list(SELF_RECOVERY_LIST, "[SAFE] Money Recovery") pcall(require("lib.net.Money"))
+HEIST_CONTROL_LIST = menu.list(SELF_RECOVERY_LIST, "[RISKY] Heist Control") pcall(require("lib.net.Heist"))
+BANAGER_LIST = menu.list(SELF_RECOVERY_LIST, "[RISKY] Musiness Banager") pcall(require("lib.net.MusinessBanager"))
 PLAYERS_LIST = menu.list(menu.my_root(), "Players")
 menu.list_select(PLAYERS_LIST, "Target", {}, "", NET.TABLE.METHOD.PLAYER, 1, function(Value) NET.VARIABLE.Players_To_Affect = Value NET.CREATE_NET_PROFILES_SPECIFIC() end)
 menu.toggle(PLAYERS_LIST, "Ignore Host", {}, "Great option if you don't want to get host kicked.", function(Enabled) NET.VARIABLE.Ignore_Host = Enabled end)
@@ -2563,7 +2501,7 @@ menu.action(TELEPORT_PLAYERS_LIST, "Teleport To My Waypoint", {}, "", NET.COMMAN
 menu.action(TELEPORT_PLAYERS_LIST, "Teleport To Casino", {}, "", NET.COMMAND.TELEPORT_PLAYERS_TO_CASINO)
 menu.toggle(ALL_PLAYERS_LIST, "Ghost Players", {}, "", function(Enabled) NET.COMMAND.GHOST_PLAYERS(Enabled) end)
 local SESSION_LIST = menu.list(menu.my_root(), "Session")
-CONSTRUCTOR_LIST = menu.list(SESSION_LIST, "Constructor") require "lib.net.Constructor"
+CONSTRUCTOR_LIST = menu.list(SESSION_LIST, "Constructor") pcall(require("lib.net.Constructor"))
 menu.toggle(SESSION_LIST, "Chat Commands", {}, "Say ;help.", function(Enabled) NET.VARIABLE.Commands_Enabled = Enabled end)
 menu.toggle(SESSION_LIST, "Session Overlay", {}, "General information about the server.", function(Enabled) NET.COMMAND.SESSION_OVERLAY(Enabled) end)
 local HOST_LIST = menu.list(SESSION_LIST, "Host Tools")
@@ -2627,6 +2565,7 @@ util.create_tick_handler(function()
     -- Menu stuff
     NET.FUNCTION.UPDATE_MENU()
     NET.FUNCTION.CHECK_FOR_2TAKE1()
+    NET.COMMAND.PUNISH_SPECTATORS()
     if NET.VARIABLE.No_Modders_Session then NET.FUNCTION.KICK_MODDERS() end
     util.yield(1000)
 end) 
