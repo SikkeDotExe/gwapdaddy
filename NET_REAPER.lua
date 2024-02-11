@@ -704,6 +704,10 @@ NET = {
             return true
         end,
 
+        IS_SPECTATING = function(player_id)
+            return bitTest(memory.read_int(memory.script_global(GlobalplayerBD + 1 + (player_id * 463) + 199)), 2)
+        end,
+
         KICK_PLAYER = function(player_id)
             local TargetName = players.get_name(player_id)
         
@@ -2344,6 +2348,26 @@ NET = {
                 for i=1, 12 do
                     VEHICLE.SET_VEHICLE_XENON_LIGHT_COLOR_INDEX(Current_Car, i)  
                     util.yield(200)
+                end
+            end
+        end,
+
+        PUNISH_SPECTATORS = function()
+            for players.list_except() as player_id do
+                local ped = GET_PLAYER_PED_SCRIPT_INDEX(player_id)
+                local vehicle = GET_VEHICLE_PED_IS_USING(ped)
+                local cam_dist = v3.distance(players.get_position(players.user()), players.get_cam_pos(player_id))
+                local pedDistance = v3.distance(players.get_position(players.user()), players.get_position(player_id))
+                local spectateTarget = players.get_spectate_target(player_id)
+                local driver = NETWORK_GET_PLAYER_INDEX_FROM_PED(GET_PED_IN_VEHICLE_SEAT(vehicle, -1))
+                if NET.FUNCTION.IS_NET_PLAYER_OK(player_id, true, true) then
+                    if IS_PED_IN_ANY_VEHICLE(ped) and driver == player_id then
+                        return
+                    end
+                    if cam_dist < 15.0 and pedDistance > 50.0 and not NET.FUNCTION.IS_SPECTATING(player_id) and spectateTarget == -1 and not NETWORK_IS_PLAYER_IN_MP_CUTSCENE(player_id) or spectateTarget == players.user()  then
+                        util.toast(players.get_name(player_id).." is spectating you.")
+                        break
+                    end
                 end
             end
         end,
