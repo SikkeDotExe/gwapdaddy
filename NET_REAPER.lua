@@ -15,6 +15,82 @@
 -- Libraries
 util.require_natives(1676318796)
 
+-- Intro
+function newTimer()
+	local self = {start = util.current_time_millis()}
+	local function reset()
+		self.start = util.current_time_millis()
+	end
+	local function elapsed()
+		return util.current_time_millis() - self.start
+	end
+	return
+	{
+		reset = reset,
+		elapsed = elapsed
+	}
+end
+
+local state = 0
+local timer <const> = newTimer()
+local scaleform = GRAPHICS.REQUEST_SCALEFORM_MOVIE("OPENING_CREDITS")
+util.create_tick_handler(function()
+    function HIDE(scaleform)
+        GRAPHICS.BEGIN_SCALEFORM_MOVIE_METHOD(scaleform, "HIDE")
+        GRAPHICS.BEGIN_TEXT_COMMAND_SCALEFORM_STRING("STRING")
+        HUD.ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME("presents")
+        GRAPHICS.END_TEXT_COMMAND_SCALEFORM_STRING()
+        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_FLOAT(0.16)
+        GRAPHICS.END_SCALEFORM_MOVIE_METHOD()
+    end
+
+    function SETUP_SINGLE_LINE(scaleform)
+        GRAPHICS.BEGIN_SCALEFORM_MOVIE_METHOD(scaleform, "SETUP_SINGLE_LINE")
+        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_TEXTURE_NAME_STRING("presents")
+        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_FLOAT(0.5)
+        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_FLOAT(0.5)
+        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_FLOAT(70.0)
+        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_FLOAT(125.0)
+        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_TEXTURE_NAME_STRING("left")
+        GRAPHICS.END_SCALEFORM_MOVIE_METHOD()
+    end
+
+    function ADD_TEXT_TO_SINGLE_LINE(scaleform, text, font, colour)
+        GRAPHICS.BEGIN_SCALEFORM_MOVIE_METHOD(scaleform, "ADD_TEXT_TO_SINGLE_LINE")
+        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_TEXTURE_NAME_STRING("presents")
+        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_TEXTURE_NAME_STRING(text)
+        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_TEXTURE_NAME_STRING(font)
+        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_TEXTURE_NAME_STRING(colour)
+        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_BOOL(true)
+        GRAPHICS.END_SCALEFORM_MOVIE_METHOD()
+    end
+
+    if not GRAPHICS.HAS_SCALEFORM_MOVIE_LOADED(scaleform) then
+        return
+    end
+    if state == 0 then
+        SETUP_SINGLE_LINE(scaleform)
+        ADD_TEXT_TO_SINGLE_LINE(scaleform, "NET.REAPER", "$font1.9", "HUD_COLOUR_WHITE")
+        ADD_TEXT_TO_SINGLE_LINE(scaleform, "V2", "$font1.9", "HUD_COLOUR_RED")
+        GRAPHICS.BEGIN_SCALEFORM_MOVIE_METHOD(scaleform, "SHOW_SINGLE_LINE")
+        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_TEXTURE_NAME_STRING("presents")
+        GRAPHICS.END_SCALEFORM_MOVIE_METHOD()
+        GRAPHICS.BEGIN_SCALEFORM_MOVIE_METHOD(scaleform, "SHOW_CREDIT_BLOCK")
+        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_TEXTURE_NAME_STRING("presents")
+        GRAPHICS.SCALEFORM_MOVIE_METHOD_ADD_PARAM_FLOAT(0.5)
+        GRAPHICS.END_SCALEFORM_MOVIE_METHOD()
+        state = 1
+        timer.reset()
+    end
+    if timer.elapsed() >= 6000 and state == 1 then
+        HIDE(scaleform)
+        state = 2
+        timer.reset()
+    end
+
+    GRAPHICS.DRAW_SCALEFORM_MOVIE_FULLSCREEN(scaleform, 255, 255, 255, 255, 0)
+end)
+
 -- Auto Update
 local status, auto_updater = pcall(require, "auto-updater")
 if not status then
@@ -2401,12 +2477,13 @@ local Title = menu.divider(menu.my_root(), "NET.REAPER V2")
 
 -- Main Options
 local SELF_LIST = menu.list(menu.my_root(), "Self")
-menu.toggle_loop(SELF_LIST, "Vanity Particles", {}, "", function()
-    local PTFX = {"scr_sum2_hal_hunted_respawn","scr_sum2_hal_rider_weak_blue","scr_sum2_hal_rider_weak_green","scr_sum2_hal_rider_weak_orange","scr_sum2_hal_rider_weak_greyblack"}
+menu.toggle_loop(SELF_LIST, "Vanity Particles", {}, "", function(Enabled)
+    local PTFX = {"scr_sum2_hal_hunted_respawn", "scr_sum2_hal_rider_weak_blue", "scr_sum2_hal_rider_weak_green", "scr_sum2_hal_rider_weak_orange", "scr_sum2_hal_rider_weak_greyblack"}
     local player_pos = players.get_position(players.user())
-    STREAMING.REQUEST_PTFX_ASSET("scr_sum2_hal")
+    local ptfx = PTFX[math.random(1, #PTFX)]
+    STREAMING.REQUEST_NAMED_PTFX_ASSET("scr_sum2_hal")
     GRAPHICS.USE_PARTICLE_FX_ASSET("scr_sum2_hal")
-    GRAPHICS.START_NETWORKED_PARTICLE_FX_NON_LOOPED_AT_COORD(PTFX[math.random(1, #PTFX)], player_pos.x, player_pos.y, player_pos.z, 0, 0, 0, 2.5, false, false, false)
+    GRAPHICS.START_NETWORKED_PARTICLE_FX_NON_LOOPED_AT_COORD(ptfx, player_pos.x, player_pos.y, player_pos.z, 0, 0, 0, 2.5, false, false, false)
     util.yield(200)
 end)
 local PROFILES_LIST = menu.list(SELF_LIST, "Profiles")
