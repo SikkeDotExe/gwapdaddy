@@ -12,8 +12,6 @@
                                                                |__/                           
 ]]
 
-local IN_DEV = true
-
 -- Libraries
 util.require_natives(1676318796)
 require "lib.net.Intro"
