@@ -2354,18 +2354,19 @@ NET = {
 
         PUNISH_SPECTATORS = function()
             for players.list_except() as player_id do
-                local ped = GET_PLAYER_PED_SCRIPT_INDEX(player_id)
-                local vehicle = GET_VEHICLE_PED_IS_USING(ped)
+                local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
+                local vehicle = PED.GET_VEHICLE_PED_IS_USING(ped)
                 local cam_dist = v3.distance(players.get_position(players.user()), players.get_cam_pos(player_id))
                 local pedDistance = v3.distance(players.get_position(players.user()), players.get_position(player_id))
                 local spectateTarget = players.get_spectate_target(player_id)
-                local driver = NETWORK_GET_PLAYER_INDEX_FROM_PED(GET_PED_IN_VEHICLE_SEAT(vehicle, -1))
+                local driver = NETWORK.NETWORK_GET_PLAYER_INDEX_FROM_PED(VEHICLE.GET_PED_IN_VEHICLE_SEAT(vehicle, -1))
                 if NET.FUNCTION.IS_NET_PLAYER_OK(player_id, true, true) then
-                    if IS_PED_IN_ANY_VEHICLE(ped) and driver == player_id then
+                    if PED.IS_PED_IN_ANY_VEHICLE(ped) and driver == player_id then
                         return
                     end
-                    if cam_dist < 15.0 and pedDistance > 50.0 and not NET.FUNCTION.IS_SPECTATING(player_id) and spectateTarget == -1 and not NETWORK_IS_PLAYER_IN_MP_CUTSCENE(player_id) or spectateTarget == players.user()  then
+                    if cam_dist < 15.0 and pedDistance > 50.0 and not NET.FUNCTION.IS_SPECTATING(player_id) and spectateTarget == -1 and not NETWORK.NETWORK_IS_PLAYER_IN_MP_CUTSCENE(player_id) or spectateTarget == players.user()  then
                         util.toast(players.get_name(player_id).." is spectating you.")
+                        menu.trigger_commands("timeout"..players.get_name(player_id).." on")
                         break
                     end
                 end
@@ -2516,6 +2517,7 @@ menu.toggle(PROFILES_LIST, "Mute Notifications", {}, "", NET.COMMAND.MUTE_STAND_
 menu.toggle(PROFILES_LIST, "Disable Reactions", {}, "Disables kick & crash reactions.", NET.COMMAND.DISABLE_STAND_REACTIONS)
 menu.action(PROFILES_LIST, "Set Profile", {}, "", function() if NET.VARIABLE.Current_Profile == 1 then NET.COMMAND.SET_PROFILE_DEFAULT() elseif NET.VARIABLE.Current_Profile == 2 then NET.COMMAND.SET_PROFILE_STRICT() elseif NET.VARIABLE.Current_Profile == 3 then NET.COMMAND.SET_PROFILE_WARRIOR() end end)
 local WEAPON_LIST = menu.list(SELF_LIST, "Weapons")
+menu.toggle_loop(WEAPON_LIST, "Fast Hand", {}, "Faster weapon swapping.", function() if TASK.GET_IS_TASK_ACTIVE(players.user_ped(), 56) then PED.FORCE_PED_AI_AND_ANIMATION_UPDATE(players.user_ped()) end end)
 menu.toggle_loop(WEAPON_LIST, "Hitbox Expander", {}, "Expands every player's hitbox.", NET.COMMAND.EXPAND_ALL_HITBOXES)
 menu.toggle_loop(WEAPON_LIST,"Rocket Aimbot", {}, "Lock onto players with homing rpg.", NET.COMMAND.LOCK_ONTO_PLAYERS, function() for i, player_id in pairs(players.list_except(true)) do local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id) PLAYER.REMOVE_PLAYER_TARGETABLE_ENTITY(players.user(), ped) end end)
 local VEHICLE_LIST = menu.list(SELF_LIST, "Vehicle")
@@ -2527,6 +2529,7 @@ menu.toggle_loop(WORLD_LIST, "Toggle Radio", {}, "Networked", function() NET.COM
 menu.toggle_loop(WORLD_LIST, "Laser Show", {}, "Networked", NET.COMMAND.LASER_SHOW)
 local PROTECTION_LIST = menu.list(SELF_LIST, "Protections")
 menu.toggle_loop(PROTECTION_LIST, "Anti Tow-Truck", {}, "", function() if PED.IS_PED_IN_ANY_VEHICLE(players.user_ped()) then VEHICLE.DETACH_VEHICLE_FROM_ANY_TOW_TRUCK(entities.get_user_vehicle_as_handle(false)) end end)
+menu.toggle_loop(PROTECTION_LIST, "Anti Spectator", {}, "You will stand still on the other player's screen.", NET.COMMAND.PUNISH_SPECTATORS)
 PLAYERS_LIST = menu.list(menu.my_root(), "Players")
 menu.list_select(PLAYERS_LIST, "Target", {}, "", NET.TABLE.METHOD.PLAYER, 1, function(Value) NET.VARIABLE.Players_To_Affect = Value NET.CREATE_NET_PROFILES_SPECIFIC() end)
 menu.toggle(PLAYERS_LIST, "Ignore Host", {}, "Great option if you don't want to get host kicked.", function(Enabled) NET.VARIABLE.Ignore_Host = Enabled end)
