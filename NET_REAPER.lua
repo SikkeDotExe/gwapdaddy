@@ -2529,7 +2529,7 @@ menu.toggle_loop(WORLD_LIST, "Toggle Radio", {}, "Networked", function() NET.COM
 menu.toggle_loop(WORLD_LIST, "Laser Show", {}, "Networked", NET.COMMAND.LASER_SHOW)
 local PROTECTION_LIST = menu.list(SELF_LIST, "Protections")
 menu.toggle_loop(PROTECTION_LIST, "Anti Tow-Truck", {}, "", function() if PED.IS_PED_IN_ANY_VEHICLE(players.user_ped()) then VEHICLE.DETACH_VEHICLE_FROM_ANY_TOW_TRUCK(entities.get_user_vehicle_as_handle(false)) end end)
-menu.toggle_loop(PROTECTION_LIST, "Anti Spectator", {}, "You will stand still on the other player's screen.", NET.COMMAND.PUNISH_SPECTATORS)
+menu.toggle(PROTECTION_LIST, "Anti Spectator", {}, "You will stand still on the other player's screen.", function(Enabled) spectatorloop = Enabled while true do if not spectatorloop then break end NET.COMMAND.PUNISH_SPECTATORS() util.yield(1000) end end)
 PLAYERS_LIST = menu.list(menu.my_root(), "Players")
 menu.list_select(PLAYERS_LIST, "Target", {}, "", NET.TABLE.METHOD.PLAYER, 1, function(Value) NET.VARIABLE.Players_To_Affect = Value NET.CREATE_NET_PROFILES_SPECIFIC() end)
 menu.toggle(PLAYERS_LIST, "Ignore Host", {}, "Great option if you don't want to get host kicked.", function(Enabled) NET.VARIABLE.Ignore_Host = Enabled end)
