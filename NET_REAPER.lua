@@ -883,7 +883,7 @@ NET = {
         },
 
         CRASH = {
-            SERVER = { -- NIGHT SCRIPTS NEEDS TO BE OPTIMIZED
+            SERVER = {
                 AIO = function() -- Ryze
                     local time = (util.current_time_millis() + 2000)
                     while time > util.current_time_millis() do
@@ -1021,7 +1021,7 @@ NET = {
                     ENTITY.SET_ENTITY_COORDS_NO_OFFSET(players.user_ped(players.user()),-1087,-3012,13.94)
                 end,
 
-                UMBRELLAV9 = function() -- Night
+                UMBRELLAV8 = function() -- Night
                     local models = {1381105889, 720581693, 1117917059, 4237751313, 2365747570, 2186304526}
                     for next = 1, #models do
                         PEDP = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(PLAYER.PLAYER_ID())
@@ -1250,13 +1250,6 @@ NET = {
             end,
 
             -- Ryze
-            SUPER = function(player_id)
-                NET.COMMAND.CRASH.CHINESE(player_id)
-                NET.COMMAND.CRASH.JESUS(player_id)
-                NET.COMMAND.CRASH.LAMP(player_id)
-                NET.COMMAND.CRASH.WEED(player_id)
-            end,
-
             CHINESE = function(player_id)
                 local player = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
                 local mdl = util.joaat("cs_taostranslator2")
@@ -2323,8 +2316,10 @@ NET = {
                 if NET.PROFILE[tostring(player_id)] then
                     if menu.is_ref_valid(menu.player_root(player_id)) then
                         local Country = tostring(menu.ref_by_rel_path(menu.player_root(player_id), "Information>Connection>Country").value)
+                        local Region = tostring(menu.ref_by_rel_path(menu.player_root(player_id), "Information>Connection>Region").value)
+                        local City = tostring(menu.ref_by_rel_path(menu.player_root(player_id), "Information>Connection>City").value)
                         menu.set_help_text(NET.PROFILE[tostring(player_id)].Menu,
-                        "Location: "..Country
+                        "Location: "..City..", "..Region..", "..Country
                         .."\nRank: "..tostring(players.get_rank(player_id))
                         .."\nMoney: $"..tostring(NET.FUNCTION.FORMAT_NUMBER(players.get_money(player_id)))
                         .."\nK/D: "..tostring(players.get_kd(player_id))
@@ -2339,30 +2334,27 @@ NET = {
         menu.toggle(NET.PROFILE[tostring(player_id)].Menu, "Pacify", {}, "Blocked by most menus, will also most likely ruin the player's scripts.", function(Enabled) NET.COMMAND.PACIFY_PLAYER(player_id, Enabled) end)
         local MODERATE_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Moderate")
         local KICK_OPTIONS = menu.list(MODERATE_LIST, "Kicks")
-        menu.action(KICK_OPTIONS, "[STAND] Legit Kick", {"lkick"}, "Don't use agaisn't modders.", function() NET.COMMAND.KICK.LEGIT(player_id) end)
-        menu.action(KICK_OPTIONS, "[NET] NET Kick", {"netkick"}, "Just like unfair but different method.", function() NET.COMMAND.KICK.NET(player_id) end)
-        menu.action(KICK_OPTIONS, "[ADDICT] Unfair Kick", {"se3kick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.UNFAIR(player_id) end)
-        menu.action(KICK_OPTIONS, "[ADDICT] Eviction Notice", {"ekick"}, "Blocked by popular menus.", function() NET.COMMAND.KICK.EVICTION_NOTICE(player_id) end)
-        menu.action(KICK_OPTIONS, "[STAND] Aggressive Kick", {"akick"}, "Very effective agaisn't modders with protections.", function() NET.COMMAND.KICK.AGGRESSIVE(player_id) end)
         menu.action(KICK_OPTIONS, "[STAND] Wrath Kick", {"wkick"}, "Will try to get host to kick target if available. If not, will try everything to get rid of the target.", function() NET.COMMAND.KICK.WRATH(player_id) end)
+        menu.action(KICK_OPTIONS, "[STAND] Aggressive Kick", {"akick"}, "Very effective agaisn't modders with protections.", function() NET.COMMAND.KICK.AGGRESSIVE(player_id) end)
+        menu.action(KICK_OPTIONS, "[ADDICT] Eviction Notice", {"ekick"}, "Blocked by popular menus.", function() NET.COMMAND.KICK.EVICTION_NOTICE(player_id) end)
+        menu.action(KICK_OPTIONS, "[ADDICT] Unfair Kick", {"se3kick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.UNFAIR(player_id) end)
+        menu.action(KICK_OPTIONS, "[NET] NET Kick", {"netkick"}, "Just like unfair but different method.", function() NET.COMMAND.KICK.NET(player_id) end)
+        menu.action(KICK_OPTIONS, "[STAND] Legit Kick", {"lkick"}, "Don't use agaisn't modders.", function() NET.COMMAND.KICK.LEGIT(player_id) end)
         local CRASH_OPTIONS = menu.list(MODERATE_LIST, "Crashes")
         menu.divider(CRASH_OPTIONS, "Modern Crashes")
-        menu.action(CRASH_OPTIONS, "[NET] Mortar Crash", {""}, "Blocked by popular menus.", function() NET.COMMAND.CRASH.MORTAR(player_id) end)
         menu.action(CRASH_OPTIONS, "[STAND] 2Take1 Crash", {"2t1crash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH["2TAKE1"](player_id) end)
         menu.action(CRASH_OPTIONS, "[STAND] Warhead Crash", {"warcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.WARHEAD(player_id) end)
+        menu.action(CRASH_OPTIONS, "[NET] Mortar Crash", {""}, "Blocked by popular menus.", function() NET.COMMAND.CRASH.MORTAR(player_id) end)
         menu.action(CRASH_OPTIONS, "[NET] Express Crash", {"xcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.EXPRESS(player_id) end) -- (S3)
         menu.action(CRASH_OPTIONS, "[NET] Dynamite Crash", {"dcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.DYNAMITE(player_id) end) -- (S2)
-        menu.divider(CRASH_OPTIONS, "Night Crashes")
         menu.action(CRASH_OPTIONS, "[NIGHT] Phantom Crash", {"phantomcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.PHANTOM(player_id) end)
         menu.action(CRASH_OPTIONS, "[NIGHT] Security Crash", {"securitycrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SECURITY(player_id) end)
         menu.action(CRASH_OPTIONS, "[NIGHT] Soup Crash", {"soupcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SOUP(player_id) end)
-        menu.divider(CRASH_OPTIONS, "Ryze Crashes")
-        menu.action(CRASH_OPTIONS, "[NET] Super Crash", {"supercrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SUPER(player_id) end)
-        menu.action(CRASH_OPTIONS, "Chinese Crash", {"ccrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.CHINESE(player_id) end)
-        menu.action(CRASH_OPTIONS, "Jesus Crash", {"jcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.JESUS(player_id) end)
-        menu.action(CRASH_OPTIONS, "Lamp Crash", {"lcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.LAMP(player_id) end)
-        menu.action(CRASH_OPTIONS, "Weed Crash", {"wcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.WEED(player_id) end)
-        menu.action(CRASH_OPTIONS, "Task Crash", {"tcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.TASK(player_id) end)
+        menu.action(CRASH_OPTIONS, "[RYZE] Chinese Crash", {"ccrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.CHINESE(player_id) end)
+        menu.action(CRASH_OPTIONS, "[RYZE] Jesus Crash", {"jcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.JESUS(player_id) end)
+        menu.action(CRASH_OPTIONS, "[RYZE] Lamp Crash", {"lcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.LAMP(player_id) end)
+        menu.action(CRASH_OPTIONS, "[RYZE] Weed Crash", {"wcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.WEED(player_id) end)
+        menu.action(CRASH_OPTIONS, "[RYZE] Task Crash", {"tcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.TASK(player_id) end)
         local TROLLING_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Trolling")
         menu.divider(TROLLING_LIST, "Unblockable & Undetected")
         menu.toggle_loop(TROLLING_LIST, "Smokescreen", {""}, "Fills up their screen with black smoke.", function() NET.COMMAND.SMOKESCREEN_PLAYER(player_id) end, function() local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id) GRAPHICS.REMOVE_PARTICLE_FX(ptfx) STREAMING.REMOVE_NAMED_PTFX_ASSET("scr_as_trans") end)
@@ -2481,11 +2473,11 @@ menu.action(SERVER_CRASH_LIST, "[RYZE] AIO Crash", {}, "Blocked by most menus.",
 menu.action(SERVER_CRASH_LIST, "[NIGHT] Moonstar Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.MOONSTAR() end)
 menu.action(SERVER_CRASH_LIST, "[NIGHT] Rope Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.ROPE() end)
 menu.action(SERVER_CRASH_LIST, "[NIGHT] Land Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.LAND() end)
-menu.action(SERVER_CRASH_LIST, "[NET] Umbrella V9 Crash", {}, "Blocked by most menus.\nReally just umbrellav8 from night.", function() NET.COMMAND.CRASH.SERVER.UMBRELLAV9() end)
+menu.action(SERVER_CRASH_LIST, "[NIGHT] Umbrella V8 Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.UMBRELLAV8() end)
 menu.action(SERVER_CRASH_LIST, "[NIGHT] Umbrella V1 Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.UMBRELLAV1() end)
 menu.action(MODERATE_PLAYERS_LIST, "Crash Players", {}, "", NET.COMMAND.CRASH_PLAYERS)
 menu.divider(MODERATE_PLAYERS_LIST, "Block Options") -- Block
-menu.toggle(MODERATE_PLAYERS_LIST, "Auto Kick Modders In Session", {"irondome"}, "Recommended to use when host.", function(Enabled) NET.VARIABLE.No_Modders_Session = Enabled end)
+menu.toggle(MODERATE_PLAYERS_LIST, "Automatic Modders Removal", {"irondome"}, "Recommended to use when host.", function(Enabled) NET.VARIABLE.No_Modders_Session = Enabled end)
 menu.toggle(MODERATE_PLAYERS_LIST, "Block Modders From Joining", {""}, "Recommended to use when host.", function(Enabled) NET.VARIABLE.Block_Modders = Enabled end)
 local RECOVERY_PLAYERS_LIST = menu.list(ALL_PLAYERS_LIST, "Recovery")
 menu.toggle_loop(RECOVERY_PLAYERS_LIST, "RP Loop", {"rplobby"}, "Will level up players until level 120.", NET.COMMAND.GIVE_PLAYERS_RP)
