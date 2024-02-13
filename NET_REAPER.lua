@@ -401,6 +401,8 @@ NET = {
             "prop_grass_001_a",
             "proc_forest_ivy_01",
             "proc_stones_04",
+            "prop_tall_drygrass_aa",
+
         },
 
         METHOD = {
@@ -840,6 +842,37 @@ NET = {
                 end
             end,
 
+            NONHOST = function(player_id)
+                menu.trigger_commands("givesh"..players.get_name(player_id))
+                -- S1
+                NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {256, 654906418})
+                -- S0
+                NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {256, 2037938629, 0, 0})
+                -- S3
+                NET.FUNCTION.FIRE_EVENT(630191280, player_id, {256, 2077719420, 1624671, 861028290, 0, 0, 15582880, 0})
+                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {256, 400924026, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, -1})
+                NET.FUNCTION.FIRE_EVENT(2079562891, player_id, {256, 0, 1113755217})
+                NET.FUNCTION.FIRE_EVENT(1214811719, player_id, {256, 1, 1, 1, 1755964883})
+                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {256, 0, 0, 0, 937361495, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(1504695802, player_id, {256, 2144444366})
+                NET.FUNCTION.FIRE_EVENT(-1091407522, player_id, {256, 1, 926425076})
+                NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {256, 0, 1807042285, 0, 0})
+               -- S0
+                NET.FUNCTION.FIRE_EVENT(623462469, player_id, {256})
+                NET.FUNCTION.FIRE_EVENT(-2102799478, player_id, {256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-2051197492, player_id, {256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1101672680, player_id, {256})
+                NET.FUNCTION.FIRE_EVENT(-1713699293, player_id, {256})
+                NET.FUNCTION.FIRE_EVENT(-1604421397, player_id, {256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                -- S4
+                NET.FUNCTION.FIRE_EVENT(1269949700, player_id, {256, 0, 2147483647})
+                NET.FUNCTION.FIRE_EVENT(-1547064369, player_id, {256, 0, 2147483647})
+                NET.FUNCTION.FIRE_EVENT(-2122488865, player_id, {256, 0, 2147483647})
+                NET.FUNCTION.FIRE_EVENT(-2026172248, player_id, {256, 0, 0, 0, 1})
+                -- S2
+                NET.FUNCTION.FIRE_EVENT(-445044249, player_id, {256, 28, -1, -1})
+            end,
+
             AGGRESSIVE = function(player_id)
                 NET.FUNCTION.KICK_PLAYER(player_id)
             end,
@@ -1107,7 +1140,7 @@ NET = {
                 end
             end,
 
-            EXPRESS = function(player_id) -- (S3)
+            ELEGANT = function(player_id) -- (S3) (STAND'S ELEGANT CRASH)
                 local int_min = -2147483647
                 local int_max = 2147483647
                 for next = 1, 30 do
@@ -2296,6 +2329,16 @@ NET = {
                 end
             end
         end,
+
+        RAINBOW_NEONS = function(Enabled)
+            if Enabled then
+                menu.trigger_commands("neoncolourrainbow 10")
+                menu.trigger_commands("vehneonall on")
+            else
+                menu.trigger_commands("neoncolourrainbow 0")
+                menu.trigger_commands("vehneonall off")
+            end
+        end,
     },
 
     PROFILE = {}, -- Menu Profiles
@@ -2336,16 +2379,17 @@ NET = {
         local KICK_OPTIONS = menu.list(MODERATE_LIST, "Kicks")
         menu.action(KICK_OPTIONS, "[STAND] Wrath Kick", {"wkick"}, "Will try to get host to kick target if available. If not, will try everything to get rid of the target.", function() NET.COMMAND.KICK.WRATH(player_id) end)
         menu.action(KICK_OPTIONS, "[STAND] Aggressive Kick", {"akick"}, "Very effective agaisn't modders with protections.", function() NET.COMMAND.KICK.AGGRESSIVE(player_id) end)
+        menu.action(KICK_OPTIONS, "[NET] Non-Host Kick", {"nhkick"}, "Effective agaisn't modders with protections.\nKnockoff of Stand's Non-Host Kick.", function() NET.COMMAND.KICK.NONHOST(player_id) end)
+        menu.action(KICK_OPTIONS, "[NET] NET Kick", {"netkick"}, "Just like unfair but different method.", function() NET.COMMAND.KICK.NET(player_id) end)
         menu.action(KICK_OPTIONS, "[ADDICT] Eviction Notice", {"ekick"}, "Blocked by popular menus.", function() NET.COMMAND.KICK.EVICTION_NOTICE(player_id) end)
         menu.action(KICK_OPTIONS, "[ADDICT] Unfair Kick", {"se3kick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.UNFAIR(player_id) end)
-        menu.action(KICK_OPTIONS, "[NET] NET Kick", {"netkick"}, "Just like unfair but different method.", function() NET.COMMAND.KICK.NET(player_id) end)
         menu.action(KICK_OPTIONS, "[STAND] Legit Kick", {"lkick"}, "Don't use agaisn't modders.", function() NET.COMMAND.KICK.LEGIT(player_id) end)
         local CRASH_OPTIONS = menu.list(MODERATE_LIST, "Crashes")
         menu.divider(CRASH_OPTIONS, "Modern Crashes")
-        menu.action(CRASH_OPTIONS, "[STAND] 2Take1 Crash", {"2t1crash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH["2TAKE1"](player_id) end)
+        menu.action(CRASH_OPTIONS, "[STAND] 2Take1 Crash", {"2t1crash"}, "Blocked by popular menus.", function() NET.COMMAND.CRASH["2TAKE1"](player_id) end)
         menu.action(CRASH_OPTIONS, "[STAND] Warhead Crash", {"warcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.WARHEAD(player_id) end)
         menu.action(CRASH_OPTIONS, "[NET] Mortar Crash", {""}, "Blocked by popular menus.", function() NET.COMMAND.CRASH.MORTAR(player_id) end)
-        menu.action(CRASH_OPTIONS, "[NET] Express Crash", {"xcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.EXPRESS(player_id) end) -- (S3)
+        menu.action(CRASH_OPTIONS, "[NET] Elegant Crash", {"elegantcrash"}, "Blocked by most menus.\nKnockoff of Stand's Elegant Crash.", function() NET.COMMAND.CRASH.ELEGANT(player_id) end) -- (S3)
         menu.action(CRASH_OPTIONS, "[NET] Dynamite Crash", {"dcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.DYNAMITE(player_id) end) -- (S2)
         menu.action(CRASH_OPTIONS, "[NIGHT] Phantom Crash", {"phantomcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.PHANTOM(player_id) end)
         menu.action(CRASH_OPTIONS, "[NIGHT] Security Crash", {"securitycrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SECURITY(player_id) end)
@@ -2445,6 +2489,7 @@ menu.toggle_loop(WEAPON_LIST,"Rocket Aimbot", {}, "Lock onto players with homing
 local VEHICLE_LIST = menu.list(SELF_LIST, "Vehicle")
 menu.toggle_loop(VEHICLE_LIST, "Vehicle Rocket Aimbot", {}, "", NET.COMMAND.VEH_ROCKET_AIMBOT)
 menu.toggle_loop(VEHICLE_LIST,"Rainbow Headlights", {""}, "", function(Enabled) NET.COMMAND.RAINBOW_HEADLIGHTS(Enabled) end)
+menu.toggle(VEHICLE_LIST,"Rainbow Neons", {""}, "", function(Enabled) NET.COMMAND.RAINBOW_NEONS(Enabled) end)
 local WORLD_LIST = menu.list(SELF_LIST, "World")
 menu.list_select(WORLD_LIST, "Stations", {}, "", NET.TABLE.RADIO.NAME, 1, function(index) NET.VARIABLE.Selected_Loud_Radio = NET.TABLE.RADIO.STATION[index] end)
 menu.toggle_loop(WORLD_LIST, "Toggle Radio", {}, "Networked", function() NET.COMMAND.TOGGLE_RADIO() end, function() if NET.VARIABLE.Party_Bus ~= nil then entities.delete_by_handle(NET.VARIABLE.Party_Bus) NET.VARIABLE.Party_Bus = nil end end)
@@ -2509,7 +2554,7 @@ menu.action(UNSTUCK_LIST, "Unstuck", {}, "", function() menu.trigger_commands("u
 menu.action(UNSTUCK_LIST, "Quick Bail", {}, "", function() menu.trigger_commands("quickbail") end)
 menu.action(UNSTUCK_LIST, "Quit To SP", {}, "", function() menu.trigger_commands("quittosp") end)
 menu.action(UNSTUCK_LIST, "Force Quit To SP", {}, "", function() menu.trigger_commands("forcequittosp") end)
-menu.action(menu.my_root(), "Credits", {}, "Made by @getfev, Scripts from JinxScript, Ryze, Night LUA & Addict Script.", function() return end)
+menu.action(menu.my_root(), "Credits", {}, "Made by @getfev.\nScripts from JinxScript, Ryze, Night LUA & Addict Script.", function() return end)
 
 PLAYERS_COUNT = menu.divider(PLAYERS_LIST, "")
 
