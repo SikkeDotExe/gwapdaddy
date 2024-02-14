@@ -68,6 +68,7 @@ NET = {
         GAME = {GlobalplayerBD = 2657921},
         Players_To_Affect = 1,
         Ignore_Host = false,
+        Ignore_Modded_Stats = false,
         Kick_Method = 3,
         Crash_Method = 3,
 
@@ -735,6 +736,46 @@ NET = {
             return Detections
         end,
 
+        IS_PLAYER_STATS_MODDED = function(player_id)
+            local Likelyness, Threshold = 0, 3
+            local Modded_Ranks, Limit = {666, 777, 808, 888, 999, 696, 669, 6969, 420, 1337}, 2500
+
+            local Player_Rank = players.get_rank(player_id)
+            local Player_Money = players.get_money(player_id)
+            local Player_KD, Player_Kills = players.get_kd(player_id), players.get_kills(player_id)
+
+            for next = 1, #Modded_Ranks do
+                if Player_Rank == Modded_Ranks[next] then
+                    Likelyness = Likelyness + 2
+                    break
+                end
+            end
+
+            if Player_Rank > Limit then
+                Likelyness = Likelyness + 2
+            end
+
+            if Player_Money > 50000000 then
+                Likelyness = Likelyness + 1
+            elseif Player_Money > 100000000 then
+                Likelyness = Likelyness + 2
+            end
+
+            if Player_KD >= 2 and Player_KD < 4 then
+                Likelyness = Likelyness + 1
+            elseif Player_KD > 4 and Player_Kills > 100 then
+                Likelyness = Likelyness + 3
+            elseif Player_KD < 0 then
+                Likelyness = Likelyness + 3
+            end
+
+            if Likelyness >= Threshold then
+                return true
+            end
+
+            return false
+        end,
+
         UPDATE_MENU = function()
             menu.set_menu_name(PLAYERS_COUNT, "Players ("..NET.VARIABLE.Players_Count..")")
             for next = 1, #players.list() do -- Changes detection tags accordingly
@@ -750,8 +791,8 @@ NET = {
                             menu.set_menu_name(Arg1, Arg2.."] [2TAKE1]")
                         elseif NET.FUNCTION.IS_PLAYER_A_THREAT(Current_Player) then
                             menu.set_menu_name(Arg1, Arg2.."] [THREAT]")
-                        elseif players.get_money(Current_Player) > 100000000 then
-                            menu.set_menu_name(Arg1, Arg2.."] [+$100M]")
+                        elseif NET.FUNCTION.IS_PLAYER_STATS_MODDED(Current_Player) then
+                            menu.set_menu_name(Arg1, Arg2.."] [$MOD]")
                         elseif players.is_using_vpn(Current_Player) then
                             menu.set_menu_name(Arg1, Arg2.."] [VPN]")
                         else
@@ -1129,11 +1170,11 @@ NET = {
             MORTAR = function(player_id)
                 for next = 1, #NET.TABLE.CRASH_OBJECT do
                     if players.exists(player_id) then
-                    local Current_Object_Hash = util.joaat(NET.TABLE.CRASH_OBJECT[next])
-                    util.request_model(Current_Object_Hash)
-                    local Current_Object = entities.create_object(Current_Object_Hash, players.get_position(player_id))
-                    util.yield(100)
-                    entities.delete_by_handle(Current_Object)
+                        local Current_Object_Hash = util.joaat(NET.TABLE.CRASH_OBJECT[next])
+                        util.request_model(Current_Object_Hash)
+                        local Current_Object = entities.create_object(Current_Object_Hash, players.get_position(player_id))
+                        util.yield(100)
+                        entities.delete_by_handle(Current_Object)
                     else
                         break
                     end
@@ -1800,6 +1841,7 @@ NET = {
             for next = 1, #ToKick do
                 if players.exists(ToKick[next]) then
                     if NET.VARIABLE.Ignore_Host and players.get_host() == ToKick[next] then return end
+                    if NET.VARIABLE.Ignore_Modded_Stats and NET.FUNCTION.IS_PLAYER_STATS_MODDED(ToKick[next]) then return end
                     local PlayerName = players.get_name(ToKick[next])
                     if NET.VARIABLE.Kick_Method == 1 then -- Unfair
                         NET.COMMAND.KICK.UNFAIR(ToKick[next])
@@ -1853,6 +1895,7 @@ NET = {
             for next = 1, #ToCrash do
                 if players.exists(ToCrash[next]) then
                     if NET.VARIABLE.Ignore_Host and players.get_host() == ToCrash[next] then return end
+                    if NET.VARIABLE.Ignore_Modded_Stats and NET.FUNCTION.IS_PLAYER_STATS_MODDED(ToCrash[next]) then return end
                     local PlayerName = players.get_name(ToCrash[next])
                     if NET.VARIABLE.Crash_Method == 1 then -- Express
                         NET.COMMAND.CRASH.EXPRESS(ToCrash[next])
@@ -2072,19 +2115,53 @@ NET = {
             end
         end,
 
+        GIVE_PLAYER_FREEBIES = function(player_id, Enabled)
+            local Player_Name = players.get_name(player_id)
+            menu.trigger_commands("commendhelpful"..Player_Name)
+            menu.trigger_commands("commendfriendly"..Player_Name)
+            menu.trigger_commands("givecollectibles"..Player_Name)
+            menu.trigger_commands("arm"..Player_Name.."all")
+            menu.trigger_commands("ceopay"..Player_Name..(Enabled and " on" or " off"))
+        end,
+
         FREEBIES = function(Enabled)
-            if Enabled then
-                menu.trigger_commands("givecollectiblesall")
-                menu.trigger_commands("rplobby on")
-                menu.trigger_commands("ceopayall on")
-                menu.trigger_commands("armallall")
-                menu.trigger_commands("loopbountyall on")
-                menu.trigger_commands("commendhelpfulall")
-                menu.trigger_commands("commendfriendlyall")
-            else
-                menu.trigger_commands("rplobby off")
-                menu.trigger_commands("ceopayall off")
-                menu.trigger_commands("loopbountyall off")
+            menu.trigger_commands("rplobby "..(Enabled and "on" or "off"))
+            
+            local ToGive = {}
+
+            if NET.VARIABLE.Players_To_Affect == 1 then
+                ToGive = players.list(false)
+            end
+        
+            if NET.VARIABLE.Players_To_Affect == 2 then
+                local Players = players.list(false)
+                for next = 1, #Players do
+                    if players.is_marked_as_modder(Players[next]) then
+                        table.insert(ToGive, Players[next])
+                    end
+                end
+            end
+        
+            if NET.VARIABLE.Players_To_Affect == 3 then
+                ToGive = players.list(false, false)
+            end
+        
+            if NET.VARIABLE.Players_To_Affect == 4 then
+                local Players = players.list(false)
+                for next = 1, #Players do
+                    if not players.is_marked_as_modder(Players[next]) then
+                        table.insert(ToGive, Players[next])
+                    end
+                end
+            end
+        
+            for next = 1, #ToGive do
+                if players.exists(ToGive[next]) then
+                    if NET.VARIABLE.Ignore_Host and players.get_host() == ToGive[next] then return end
+                    if NET.VARIABLE.Ignore_Modded_Stats and NET.FUNCTION.IS_PLAYER_STATS_MODDED(ToGive[next]) then return end
+                    NET.COMMAND.GIVE_PLAYER_FREEBIES(ToGive[next], Enabled)
+                    util.yield(100)
+                end
             end
 
             NET.VARIABLE.RP_Loop = Enabled
@@ -2122,6 +2199,7 @@ NET = {
             for next = 1, #ToGive do
                 if players.exists(ToGive[next]) then
                     if NET.VARIABLE.Ignore_Host and players.get_host() == ToGive[next] then return end
+                    if NET.VARIABLE.Ignore_Modded_Stats and NET.FUNCTION.IS_PLAYER_STATS_MODDED(ToGive[next]) then return end
                     NET.COMMAND.GIVE_PLAYER_RP(ToGive[next], 0)
                 end
             end
@@ -2159,6 +2237,7 @@ NET = {
             for next = 1, #ToGhost do
                 if players.exists(ToGhost[next]) then
                     if NET.VARIABLE.Ignore_Host and players.get_host() == ToGhost[next] then return end
+                    if NET.VARIABLE.Ignore_Modded_Stats and NET.FUNCTION.IS_PLAYER_STATS_MODDED(ToGhost[next]) then return end
                     NETWORK.SET_REMOTE_PLAYER_AS_GHOST(ToGhost[next], Enabled)
                 end
             end
@@ -2333,11 +2412,23 @@ NET = {
         RAINBOW_NEONS = function(Enabled)
             if Enabled then
                 menu.trigger_commands("neoncolourrainbow 10")
+                menu.trigger_commands("neoncoloursaturation 100")
+                menu.trigger_commands("neoncolourvalue 100")
                 menu.trigger_commands("vehneonall on")
             else
                 menu.trigger_commands("neoncolourrainbow 0")
                 menu.trigger_commands("vehneonall off")
             end
+        end,
+
+        VANITY_PARTICLES = function(player_id)
+            local PTFX = {"scr_sum2_hal_hunted_respawn", "scr_sum2_hal_rider_weak_blue", "scr_sum2_hal_rider_weak_green", "scr_sum2_hal_rider_weak_orange", "scr_sum2_hal_rider_weak_greyblack"}
+            local player_pos = players.get_position(player_id)
+            local ptfx = PTFX[math.random(1, #PTFX)]
+            STREAMING.REQUEST_NAMED_PTFX_ASSET("scr_sum2_hal")
+            GRAPHICS.USE_PARTICLE_FX_ASSET("scr_sum2_hal")
+            GRAPHICS.START_NETWORKED_PARTICLE_FX_NON_LOOPED_AT_COORD(ptfx, player_pos.x, player_pos.y, player_pos.z, 0, 0, 0, 2.5, false, false, false)
+            util.yield(200)
         end,
     },
 
@@ -2412,6 +2503,7 @@ NET = {
         menu.toggle(NEUTRAL_LIST, "Spectate", {}, "", function(Enabled) NET.COMMAND.SPECTATE_PLAYER(player_id, Enabled) end)
         menu.toggle_loop(NEUTRAL_LIST, "Ghost Player", {""}, "", function() NETWORK.SET_REMOTE_PLAYER_AS_GHOST(player_id, true) end, function() NETWORK.SET_REMOTE_PLAYER_AS_GHOST(player_id, false) end)
         menu.toggle(NEUTRAL_LIST, "Fake Money Drop", {""}, "", function(Enabled) NET.COMMAND.FAKE_MONEY_DROP(player_id, Enabled) end)
+        menu.toggle_loop(NEUTRAL_LIST, "Vanity Particles", {}, "", function(Enabled) NET.COMMAND.VANITY_PARTICLES(player_id) end)
         local FRIENDLY_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Friendly")
         local SPAWN_VEHICLE_LIST = menu.list(FRIENDLY_LIST, "Spawn Vehicle") for i, types in pairs(NET.TABLE.VEHICLE) do local LIST = menu.list(SPAWN_VEHICLE_LIST, tostring(i)) for j, k in pairs(types) do menu.action(LIST, "Spawn - "..tostring(k), {}, "", function() menu.trigger_commands("as "..players.get_name(player_id).." "..k) end) end end
         menu.toggle_loop(FRIENDLY_LIST, "RP Drop", {}, "Will give rp until player is level 120.", function() NET.COMMAND.GIVE_PLAYER_RP(player_id, 0) end)
@@ -2468,15 +2560,7 @@ NET = {
 -- Main Options
 local Title = menu.divider(menu.my_root(), "NET.REAPER V2")
 local SELF_LIST = menu.list(menu.my_root(), "Self")
-menu.toggle_loop(SELF_LIST, "Vanity Particles", {}, "", function(Enabled)
-    local PTFX = {"scr_sum2_hal_hunted_respawn", "scr_sum2_hal_rider_weak_blue", "scr_sum2_hal_rider_weak_green", "scr_sum2_hal_rider_weak_orange", "scr_sum2_hal_rider_weak_greyblack"}
-    local player_pos = players.get_position(players.user())
-    local ptfx = PTFX[math.random(1, #PTFX)]
-    STREAMING.REQUEST_NAMED_PTFX_ASSET("scr_sum2_hal")
-    GRAPHICS.USE_PARTICLE_FX_ASSET("scr_sum2_hal")
-    GRAPHICS.START_NETWORKED_PARTICLE_FX_NON_LOOPED_AT_COORD(ptfx, player_pos.x, player_pos.y, player_pos.z, 0, 0, 0, 2.5, false, false, false)
-    util.yield(200)
-end)
+menu.toggle_loop(SELF_LIST, "Vanity Particles", {}, "", function(Enabled) NET.COMMAND.VANITY_PARTICLES(players.user()) end)
 local PROFILES_LIST = menu.list(SELF_LIST, "Profiles")
 menu.list_select(PROFILES_LIST, "Profiles", {}, "", NET.TABLE.PROFILE, 1, function(Value) NET.VARIABLE.Current_Profile = NET.TABLE.PROFILE[Value] end)
 menu.toggle(PROFILES_LIST, "Mute Notifications", {}, "", NET.COMMAND.MUTE_STAND_REACTION_NOTIFICATIONS)
@@ -2506,6 +2590,7 @@ BANAGER_LIST = menu.list(SELF_RECOVERY_LIST, "[RISKY] Musiness Banager") pcall(r
 PLAYERS_LIST = menu.list(menu.my_root(), "Players")
 menu.list_select(PLAYERS_LIST, "Target", {}, "", NET.TABLE.METHOD.PLAYER, 1, function(Value) NET.VARIABLE.Players_To_Affect = Value NET.CREATE_NET_PROFILES_SPECIFIC() end)
 menu.toggle(PLAYERS_LIST, "Ignore Host", {}, "Great option if you don't want to get host kicked.", function(Enabled) NET.VARIABLE.Ignore_Host = Enabled end)
+menu.toggle(PLAYERS_LIST, "Ignore Modded Stats", {}, "Ignores players with modded stats.", function(Enabled) NET.VARIABLE.Ignore_Modded_Stats = Enabled end)
 local ALL_PLAYERS_LIST = menu.list(PLAYERS_LIST, "All Players", {}, "Related to target.")
 local MODERATE_PLAYERS_LIST = menu.list(ALL_PLAYERS_LIST, "Moderate")
 menu.divider(MODERATE_PLAYERS_LIST, "Kicks") -- Kicks
@@ -2534,11 +2619,8 @@ menu.toggle(TELEPORT_PLAYERS_LIST, "Ignore Interior", {}, "Will ignore players w
 menu.action(TELEPORT_PLAYERS_LIST, "Teleport To Me", {}, "", NET.COMMAND.SUMMON_PLAYERS)
 menu.action(TELEPORT_PLAYERS_LIST, "Teleport To My Waypoint", {}, "", NET.COMMAND.TELEPORT_PLAYERS_TO_WAYPOINT)
 menu.action(TELEPORT_PLAYERS_LIST, "Teleport To Casino", {}, "", NET.COMMAND.TELEPORT_PLAYERS_TO_CASINO)
-menu.toggle(ALL_PLAYERS_LIST, "Ghost Players", {}, "", function(Enabled) NET.COMMAND.GHOST_PLAYERS(Enabled) end)
+menu.toggle_loop(ALL_PLAYERS_LIST, "Ghost Players", {}, "", function(Enabled) NET.COMMAND.GHOST_PLAYERS(Enabled) end)
 local SESSION_LIST = menu.list(menu.my_root(), "Session")
-CONSTRUCTOR_LIST = menu.list(SESSION_LIST, "Constructor") pcall(require("lib.net.Constructor"))
-menu.toggle(SESSION_LIST, "Chat Commands", {}, "Say ;help.", function(Enabled) NET.VARIABLE.Commands_Enabled = Enabled end)
-menu.toggle(SESSION_LIST, "Session Overlay", {}, "General information about the server.", function(Enabled) NET.COMMAND.SESSION_OVERLAY(Enabled) end)
 local HOST_LIST = menu.list(SESSION_LIST, "Host Tools")
 menu.divider(HOST_LIST, "Host")
 menu.toggle_loop(HOST_LIST, "Host Addict", {}, "Automates the process of becoming host by calculating risks and giving you the best available session.", NET.COMMAND.HOST_ADDICT)
@@ -2546,6 +2628,9 @@ menu.action(HOST_LIST, "Become Host", {}, "", NET.COMMAND.BECOME_HOST)
 menu.divider(HOST_LIST, "Script Host")
 menu.toggle_loop(HOST_LIST, "Script Host Addict", {}, "Gatekeep script host with all of your might.", NET.COMMAND.BECOME_SCRIPT_HOST)
 menu.action(HOST_LIST, "Become Script Host", {""}, "", NET.COMMAND.BECOME_SCRIPT_HOST)
+CONSTRUCTOR_LIST = menu.list(SESSION_LIST, "Constructor") pcall(require("lib.net.Constructor"))
+menu.toggle(SESSION_LIST, "Chat Commands", {}, "Say ;help.", function(Enabled) NET.VARIABLE.Commands_Enabled = Enabled end)
+menu.toggle(SESSION_LIST, "Session Overlay", {}, "General information about the server.", function(Enabled) NET.COMMAND.SESSION_OVERLAY(Enabled) end)
 menu.action(SESSION_LIST, "Server Hop", {}, "", function() menu.trigger_commands("playermagnet 30") menu.trigger_commands("go public") end)
 menu.action(SESSION_LIST, "Rejoin", {}, "", function() menu.trigger_commands("rejoin") end)
 local UNSTUCK_LIST = menu.list(SESSION_LIST, "Unstuck", {}, "Every methods to get unstuck.")
