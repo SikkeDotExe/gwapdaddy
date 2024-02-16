@@ -12,6 +12,19 @@
                                                                |__/                           
 ]]
 
+--[[
+    local p_types = {100416529, 126349499}
+    local projectile_options = {translations.bullet, translations.snowball}
+    menu.list_action(explosions_root, translations.projectile_type, {translations.projectile_type_cmd}, "", projectile_options, function(index, value, click_type)
+        local target_ped = GET_PLAYER_PED_SCRIPT_INDEX(pid)
+        local target = GET_ENTITY_COORDS(target_ped, false)
+        local owner = players.user_ped()
+        p_type = p_types[index]
+        REQUEST_WEAPON_ASSET(p_type)
+        SHOOT_SINGLE_BULLET_BETWEEN_COORDS(target['x'], target['y'], target['z']+0.5, target['x'], target['y'], target['z']+0.6, 100, true, p_type, owner, true, false, 4000.0, 0)
+    end)
+]]
+
 -- Libraries
 util.require_natives(1676318796)
 require "lib.net.Intro"
@@ -99,6 +112,8 @@ NET = {
         Commands_Enabled = false,
         Commands_Default_Prefix = ";",
         Commands_Prefix = Commands_Default_Prefix,
+
+        Auto_Ghost = false,
     },
 
     TABLE = {
@@ -402,8 +417,9 @@ NET = {
             "prop_grass_001_a",
             "proc_forest_ivy_01",
             "proc_stones_04",
-            "prop_tall_drygrass_aa",
-
+            "prop_tall_drygrass_aa", -- NET
+            "prop_thindesertfiller_aa", -- NET
+            
         },
 
         METHOD = {
@@ -737,8 +753,11 @@ NET = {
         end,
 
         IS_PLAYER_STATS_MODDED = function(player_id)
-            local Likelyness, Threshold = 0, 3
-            local Modded_Ranks, Limit = {666, 777, 808, 888, 999, 696, 669, 6969, 420, 1337}, 2500
+            local Likelyness = 0
+            local Threshold = 3
+            local Modded_Ranks = {666, 777, 808, 888, 999, 696, 669, 6969, 420, 1337}
+            local Limit = 2500
+            local Limit2 = 5000
 
             local Player_Rank = players.get_rank(player_id)
             local Player_Money = players.get_money(player_id)
@@ -753,6 +772,10 @@ NET = {
 
             if Player_Rank > Limit then
                 Likelyness = Likelyness + 2
+            end
+
+            if Player_Rank > Limit2 then
+                Likelyness = Likelyness + 3
             end
 
             if Player_Money > 50000000 then
@@ -1155,11 +1178,12 @@ NET = {
 
             },
 
-            ["2TAKE1"] = function(player_id)
+            ["2TAKE1"] = function(player_id) -- (T9) (S3) (NB)
                 NET.FUNCTION.CRASH_PLAYER(player_id)
             end,
 
-            WARHEAD = function(player_id)
+            WARHEAD = function(player_id) -- (N4)
+                local TargetName = players.get_name(player_id)
                 NET.FUNCTION.CRASH_PLAYER(player_id)
                 menu.trigger_commands("footlettuce"..TargetName)
                 if players.get_vehicle_model(player_id) then
@@ -1167,7 +1191,7 @@ NET = {
                 end
             end,
 
-            MORTAR = function(player_id)
+            MORTAR = function(player_id) -- (XF) Crash Objects
                 for next = 1, #NET.TABLE.CRASH_OBJECT do
                     if players.exists(player_id) then
                         local Current_Object_Hash = util.joaat(NET.TABLE.CRASH_OBJECT[next])
@@ -1201,8 +1225,20 @@ NET = {
                 end
             end,
 
+            CHICKEN = function(player_id) -- (X9)
+                local chicken_model = util.joaat("A_C_HEN") or 1794449327
+                util.request_model(chicken_model)
+                local pos = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id))
+                local chicken  = entities.create_ped(28, chicken_model, pos, 0)
+                WEAPON.GIVE_WEAPON_TO_PED(chicken, -1813897027, 1, true, true)
+                util.yield(1000)
+                TASK.TASK_THROW_PROJECTILE(chicken, pos.x, pos.y, pos.z, 0, 0)
+                util.yield(5000)
+                entities.delete(chicken)
+            end,
+
             -- Night
-            PHANTOM = function(player_id)
+            PHANTOM = function(player_id) -- (XM) (A0:221) (A0:205) (A0:38) (A0:445) (A0:238) (A0:241) (A0:218)
                 local player = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
                 local veh = entities.get_all_vehicles_as_handles()
                 for i = 1, #veh do
@@ -1254,63 +1290,7 @@ NET = {
                 entities.delete_by_handle(ped_task2)
             end,
 
-            SECURITY = function(player_id)
-                local TargetPlayerPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
-                local TargetPlayerPos = ENTITY.GET_ENTITY_COORDS(TargetPlayerPed, true)
-                local coords = ENTITY.GET_ENTITY_COORDS(ped)
-                local model = util.joaat("banshee")
-                local pos <const> = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED(player_id))
-                local sb_ped <const> = entities.create_ped(26,util.joaat("a_c_rat"),pos,0)
-                local crash_plane <const> = NET.FUNCTION.SPAWN_VEHICLE(0x9c5e5644,pos,0)
-                local time <const> = util.current_time_millis() + 3500
-                local mypos = ENTITY.GET_ENTITY_COORDS(PLAYER.PLAYER_PED_ID())
-                local PEDS = {
-                    PED1 = entities.create_ped(26,util.joaat("cs_beverly"),TargetPlayerPos, 0),
-                    PED2 = entities.create_ped(26,util.joaat("cs_fabien"),TargetPlayerPos, 0),
-                    PED3 = entities.create_ped(26,util.joaat("cs_manuel"),TargetPlayerPos, 0),
-                    PED4 = entities.create_ped(26,util.joaat("cs_taostranslator"),TargetPlayerPos, 0),
-                    PED5 = entities.create_ped(26,util.joaat("cs_taostranslator2"),TargetPlayerPos, 0),
-                    PED6 = entities.create_ped(26,util.joaat("cs_tenniscoach"),TargetPlayerPos, 0),
-                    PED7 = entities.create_ped(26,util.joaat("cs_wade"),TargetPlayerPos, 0),
-                }
-                util.request_model(model)
-                local vehicle = entities.create_vehicle(model,coords,0)
-                pos.x = pos.x + 3
-                PED.SET_PED_INTO_VEHICLE(sb_ped,crash_plane,-1)
-                PED.SET_PED_INTO_VEHICLE(players.user_ped(players.user()),crash_plane,-1)
-                ENTITY.FREEZE_ENTITY_POSITION(crash_plane,true)
-                TASK.TASK_OPEN_VEHICLE_DOOR(players.user_ped(players.user()), crash_plane, 9999, -1, 2)
-                while time > util.current_time_millis() do
-                    TASK.TASK_LEAVE_VEHICLE(sb_ped, crash_plane, 0)
-                    util.yield(1)
-                    VEHICLE.SET_VEHICLE_MOD_KIT(vehicle, 0)
-                    ENTITY.SET_ENTITY_COLLISION(vehicle, false, true)
-                    VEHICLE.SET_VEHICLE_GRAVITY(vehicle, 0)
-                    local max_mod = VEHICLE.GET_NUM_VEHICLE_MODS(vehicle, i)-1
-                    VEHICLE.SET_VEHICLE_MOD(vehicle, i, max_mod, false)
-                    ENTITY.SET_ENTITY_COORDS_NO_OFFSET(players.user_ped(players.user()),mypos.x+300,mypos.y+700,mypos.z+1500)
-                    ENTITY.FREEZE_ENTITY_POSITION(players.user_ped(players.user()),true)
-                    for next = 1, #PEDS do
-                        ENTITY.SET_ENTITY_VISIBLE(PEDS[next], false, 0)
-                    end
-                    util.yield(500)
-                    for next = 1, #PEDS do
-                        WEAPON.GIVE_WEAPON_TO_PED(PEDS[next],-270015777,80,true,true)
-                    end
-                    util.yield(1500)
-                    for next = 1, 3 do
-                        FIRE.ADD_OWNED_EXPLOSION(players.user_ped(), TargetPlayerPos.x, TargetPlayerPos.y, TargetPlayerPos.z, 2, 50, true, false, 0.0)
-                    end
-                    ENTITY.SET_ENTITY_COORDS_NO_OFFSET(players.user_ped(players.user()), mypos.x, mypos.y, mypos.z)
-                    ENTITY.FREEZE_ENTITY_POSITION(players.user_ped(players.user()),false)
-                    util.yield(2500)
-                    for next = 1, #PEDS do
-                        entities.delete_by_handle(PEDS[next])
-                    end
-               end
-            end,
-
-            SOUP = function(player_id)
+            SOUP = function(player_id) -- (XA)
                 util.request_model(-1011537562)
                 util.request_model(-541762431)
                 local pos = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id))
@@ -1321,10 +1301,13 @@ NET = {
                 util.yield(1000)
                 TASK.TASK_THROW_PROJECTILE(PED1,pos.x,pos.y,pos.z,0,0)
                 TASK.TASK_THROW_PROJECTILE(PED2,pos.x,pos.y,pos.z,0,0)
+                util.yield(5000)
+                entities.delete(PED1)
+                entities.delete(PED2)
             end,
 
             -- Ryze
-            CHINESE = function(player_id)
+            CHINESE = function(player_id) -- (X8) (X9)
                 local player = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
                 local mdl = util.joaat("cs_taostranslator2")
                 while not STREAMING.HAS_MODEL_LOADED(mdl) do
@@ -1342,6 +1325,9 @@ NET = {
                     WEAPON.SET_PED_GADGET(ped[i], 0xB1CA77B1, true)
         
                     ENTITY.SET_ENTITY_VISIBLE(ped[i], true)
+                    -- Set on fire
+                    local pos = ENTITY.GET_ENTITY_COORDS(ped[i], false)
+                    FIRE.ADD_EXPLOSION(pos.x, pos.y, pos.z, 3, 10.0, false, true, 1.0, false, false)
                     util.yield(25)
                 end
                 util.yield(2500)
@@ -1351,7 +1337,7 @@ NET = {
                 end
             end,
 
-            JESUS = function(player_id)
+            JESUS = function(player_id) -- (A2:456)
                 local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
                 local pos = players.get_position(player_id)
                 local mdl = util.joaat("u_m_m_jesus_01")
@@ -1375,7 +1361,7 @@ NET = {
                 STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(veh_mdl)
             end,
 
-            LAMP = function(player_id)
+            LAMP = function(player_id) -- (XJ)
                 NET.FUNCTION.BLOCK_SYNCS(player_id, function()
                     local object = entities.create_object(util.joaat("prop_fragtest_cnst_04"), ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)))
                     OBJECT.BREAK_OBJECT_FRAGMENT_CHILD(object, 1, false)
@@ -1384,33 +1370,7 @@ NET = {
                 end)
             end,
 
-            WEED = function(player_id)
-                local cord = players.get_position(player_id)
-                local a1 = entities.create_object(-930879665, cord)
-                local a2 = entities.create_object(3613262246, cord)
-                local b1 = entities.create_object(452618762, cord)
-                local b2 = entities.create_object(3613262246, cord)
-                for i = 1, 10 do
-                    util.request_model(-930879665)
-                    util.yield(10)
-                    util.request_model(3613262246)
-                    util.yield(10)
-                    util.request_model(452618762)
-                    util.yield(300)
-                    entities.delete_by_handle(a1)
-                    entities.delete_by_handle(a2)
-                    entities.delete_by_handle(b1)
-                    entities.delete_by_handle(b2)
-                    util.request_model(452618762)
-                    util.yield(10)
-                    util.request_model(3613262246)
-                    util.yield(10)
-                    util.request_model(-930879665)
-                    util.yield(10)
-                end
-            end,
-
-            TASK = function(player_id)
+            TASK = function(player_id) -- (A0:57)
                 local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
                 local user = PLAYER.GET_PLAYER_PED(players.user())
                 local pos = ENTITY.GET_ENTITY_COORDS(ped)
@@ -2241,6 +2201,8 @@ NET = {
                     NETWORK.SET_REMOTE_PLAYER_AS_GHOST(ToGhost[next], Enabled)
                 end
             end
+
+            NET.VARIABLE.Auto_Ghost = Enabled
         end,
 
         SUMMON_PLAYERS = function()
@@ -2476,20 +2438,21 @@ NET = {
         menu.action(KICK_OPTIONS, "[ADDICT] Unfair Kick", {"se3kick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.UNFAIR(player_id) end)
         menu.action(KICK_OPTIONS, "[STAND] Legit Kick", {"lkick"}, "Don't use agaisn't modders.", function() NET.COMMAND.KICK.LEGIT(player_id) end)
         local CRASH_OPTIONS = menu.list(MODERATE_LIST, "Crashes")
-        menu.divider(CRASH_OPTIONS, "Modern Crashes")
         menu.action(CRASH_OPTIONS, "[STAND] 2Take1 Crash", {"2t1crash"}, "Blocked by popular menus.", function() NET.COMMAND.CRASH["2TAKE1"](player_id) end)
         menu.action(CRASH_OPTIONS, "[STAND] Warhead Crash", {"warcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.WARHEAD(player_id) end)
         menu.action(CRASH_OPTIONS, "[NET] Mortar Crash", {""}, "Blocked by popular menus.", function() NET.COMMAND.CRASH.MORTAR(player_id) end)
-        menu.action(CRASH_OPTIONS, "[NET] Elegant Crash", {"elegantcrash"}, "Blocked by most menus.\nKnockoff of Stand's Elegant Crash.", function() NET.COMMAND.CRASH.ELEGANT(player_id) end) -- (S3)
-        menu.action(CRASH_OPTIONS, "[NET] Dynamite Crash", {"dcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.DYNAMITE(player_id) end) -- (S2)
+        menu.action(CRASH_OPTIONS, "[NET] Elegant Crash", {"elegantcrash"}, "Blocked by most menus.\nPartial knockoff of Stand's Elegant Crash.", function() NET.COMMAND.CRASH.ELEGANT(player_id) end)
+        menu.action(CRASH_OPTIONS, "[NET] Dynamite Crash", {"dcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.DYNAMITE(player_id) end)
+        menu.action(CRASH_OPTIONS, "[NET] Chicken Crash", {"hencrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.CHICKEN(player_id) end)
         menu.action(CRASH_OPTIONS, "[NIGHT] Phantom Crash", {"phantomcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.PHANTOM(player_id) end)
-        menu.action(CRASH_OPTIONS, "[NIGHT] Security Crash", {"securitycrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SECURITY(player_id) end)
         menu.action(CRASH_OPTIONS, "[NIGHT] Soup Crash", {"soupcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SOUP(player_id) end)
         menu.action(CRASH_OPTIONS, "[RYZE] Chinese Crash", {"ccrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.CHINESE(player_id) end)
         menu.action(CRASH_OPTIONS, "[RYZE] Jesus Crash", {"jcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.JESUS(player_id) end)
         menu.action(CRASH_OPTIONS, "[RYZE] Lamp Crash", {"lcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.LAMP(player_id) end)
-        menu.action(CRASH_OPTIONS, "[RYZE] Weed Crash", {"wcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.WEED(player_id) end)
         menu.action(CRASH_OPTIONS, "[RYZE] Task Crash", {"tcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.TASK(player_id) end)
+        menu.action(CRASH_OPTIONS, "[PROTO] Steamroller Crash", {}, "Prototype.", function()
+            
+        end)
         local TROLLING_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Trolling")
         menu.divider(TROLLING_LIST, "Unblockable & Undetected")
         menu.toggle_loop(TROLLING_LIST, "Smokescreen", {""}, "Fills up their screen with black smoke.", function() NET.COMMAND.SMOKESCREEN_PLAYER(player_id) end, function() local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id) GRAPHICS.REMOVE_PARTICLE_FX(ptfx) STREAMING.REMOVE_NAMED_PTFX_ASSET("scr_as_trans") end)
@@ -2583,10 +2546,10 @@ menu.toggle_loop(PROTECTION_LIST, "Anti Tow-Truck", {}, "", function() if PED.IS
 menu.toggle(PROTECTION_LIST, "Anti Spectator", {}, "You will stand still on the other player's screen.", function(Enabled) NET.VARIABLE.Spectate_Loop = Enabled end)
 ENTITY_THROTTLER_LIST = menu.list(PROTECTION_LIST, "Entity Throttler", {}, "Great anti object crash & anti ferris wheel troll.") pcall(require("lib.net.Throttler"))
 local SELF_RECOVERY_LIST = menu.list(SELF_LIST, "Recovery")
-SLOTBOT_LIST = menu.list(SELF_RECOVERY_LIST, "[SAFE] Slotbot") pcall(require("lib.net.SlotBot"))
-MONEY_LIST = menu.list(SELF_RECOVERY_LIST, "[SAFE] Money Recovery") pcall(require("lib.net.Money"))
-HEIST_CONTROL_LIST = menu.list(SELF_RECOVERY_LIST, "[RISKY] Heist Control") pcall(require("lib.net.Heist"))
-BANAGER_LIST = menu.list(SELF_RECOVERY_LIST, "[RISKY] Musiness Banager") pcall(require("lib.net.MusinessBanager"))
+SLOTBOT_LIST = menu.list(SELF_RECOVERY_LIST, "[SAFE] Slotbot", {}, "", function() require("lib.net.SlotBot") end)
+MONEY_LIST = menu.list(SELF_RECOVERY_LIST, "[SAFE] Money Recovery", {}, "", function() require("lib.net.Money") end)
+HEIST_CONTROL_LIST = menu.list(SELF_RECOVERY_LIST, "[RISKY] Heist Control", {}, "", function() require("lib.net.Heist") end)
+BANAGER_LIST = menu.list(SELF_RECOVERY_LIST, "[RISKY] Musiness Banager", {}, "", function() require("lib.net.MusinessBanager") end)
 PLAYERS_LIST = menu.list(menu.my_root(), "Players")
 menu.list_select(PLAYERS_LIST, "Target", {}, "", NET.TABLE.METHOD.PLAYER, 1, function(Value) NET.VARIABLE.Players_To_Affect = Value NET.CREATE_NET_PROFILES_SPECIFIC() end)
 menu.toggle(PLAYERS_LIST, "Ignore Host", {}, "Great option if you don't want to get host kicked.", function(Enabled) NET.VARIABLE.Ignore_Host = Enabled end)
@@ -2619,7 +2582,7 @@ menu.toggle(TELEPORT_PLAYERS_LIST, "Ignore Interior", {}, "Will ignore players w
 menu.action(TELEPORT_PLAYERS_LIST, "Teleport To Me", {}, "", NET.COMMAND.SUMMON_PLAYERS)
 menu.action(TELEPORT_PLAYERS_LIST, "Teleport To My Waypoint", {}, "", NET.COMMAND.TELEPORT_PLAYERS_TO_WAYPOINT)
 menu.action(TELEPORT_PLAYERS_LIST, "Teleport To Casino", {}, "", NET.COMMAND.TELEPORT_PLAYERS_TO_CASINO)
-menu.toggle_loop(ALL_PLAYERS_LIST, "Ghost Players", {}, "", function(Enabled) NET.COMMAND.GHOST_PLAYERS(Enabled) end)
+menu.toggle(ALL_PLAYERS_LIST, "Ghost Players", {}, "", function(Enabled) NET.COMMAND.GHOST_PLAYERS(Enabled) end)
 local SESSION_LIST = menu.list(menu.my_root(), "Session")
 local HOST_LIST = menu.list(SESSION_LIST, "Host Tools")
 menu.divider(HOST_LIST, "Host")
@@ -2663,6 +2626,10 @@ players.on_join(function(player_id)
     if NET.VARIABLE.RP_Loop then
         repeat util.yield(1000) until NET.FUNCTION.IS_NET_PLAYER_OK(player_id)
         menu.trigger_commands("givecollectibles"..players.get_name(player_id))
+    end
+
+    if NET.VARIABLE.Auto_Ghost then
+        NETWORK.SET_REMOTE_PLAYER_AS_GHOST(player_id, NET.VARIABLE.Auto_Ghost)
     end
 
     if player_id ~= players.user() then NET.TABLE.PLAYER_RANKED[players.get_name(player_id)] = {Rank = 1, Prefix = NET.VARIABLE.Commands_Default_Prefix} end
