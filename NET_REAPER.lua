@@ -12,18 +12,8 @@
                                                                |__/                           
 ]]
 
---[[
-    local p_types = {100416529, 126349499}
-    local projectile_options = {translations.bullet, translations.snowball}
-    menu.list_action(explosions_root, translations.projectile_type, {translations.projectile_type_cmd}, "", projectile_options, function(index, value, click_type)
-        local target_ped = GET_PLAYER_PED_SCRIPT_INDEX(pid)
-        local target = GET_ENTITY_COORDS(target_ped, false)
-        local owner = players.user_ped()
-        p_type = p_types[index]
-        REQUEST_WEAPON_ASSET(p_type)
-        SHOOT_SINGLE_BULLET_BETWEEN_COORDS(target['x'], target['y'], target['z']+0.5, target['x'], target['y'], target['z']+0.6, 100, true, p_type, owner, true, false, 4000.0, 0)
-    end)
-]]
+IN_DEV = false
+VERSION = "1.0.1"
 
 -- Libraries
 util.require_natives(1676318796)
@@ -248,6 +238,7 @@ NET = {
             {Name = "Modded Bounty", Threat = 1},
             {Name = "Modded Explosion", Threat = 1},
             {Name = "Attacking While Invulnerable", Threat = 1},
+            {Name = "YimMenu User", Threat = 0},
         },
 
         NOTIFICATION_COLOR = {
@@ -729,6 +720,17 @@ NET = {
                 if NET.FUNCTION.IS_NET_PLAYER_OK(player_id) and bitset == 1024 and players.get_weapon_damage_modifier(player_id) == 1 and not players.is_godmode(player_id) and not pegasusveh and memory.read_int(memory.script_global(1845263 + 1 + (player_id * 877) + 9)) == 0 then
                     if not NET.FUNCTION.IS_PLAYER_FLAGGED(player_id, "2Take1 User") then
                         players.add_detection(player_id, "2Take1 User", TOAST_ALL, 100)
+                        return
+                    end
+                end
+            end
+        end,
+
+        CHECK_FOR_YIM = function()
+            for i, player_id in pairs(players.list_except()) do
+                if tonumber(players.get_host_token(player_id)) == 41 then
+                    if not NET.FUNCTION.IS_PLAYER_FLAGGED(player_id, "YimMenu User") then
+                        players.add_detection(player_id, "YimMenu User", TOAST_ALL, 100)
                         return
                     end
                 end
@@ -2450,10 +2452,8 @@ NET = {
         menu.action(CRASH_OPTIONS, "[RYZE] Jesus Crash", {"jcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.JESUS(player_id) end)
         menu.action(CRASH_OPTIONS, "[RYZE] Lamp Crash", {"lcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.LAMP(player_id) end)
         menu.action(CRASH_OPTIONS, "[RYZE] Task Crash", {"tcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.TASK(player_id) end)
-        menu.action(CRASH_OPTIONS, "[PROTO] Steamroller Crash", {}, "Prototype.", function()
-            
-        end)
         local TROLLING_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Trolling")
+        menu.action(TROLLING_LIST, "Kill", {}, "Blocked by most menus.", function() NET.COMMAND.KILL_PLAYER(player_id) end)
         menu.divider(TROLLING_LIST, "Unblockable & Undetected")
         menu.toggle_loop(TROLLING_LIST, "Smokescreen", {""}, "Fills up their screen with black smoke.", function() NET.COMMAND.SMOKESCREEN_PLAYER(player_id) end, function() local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id) GRAPHICS.REMOVE_PARTICLE_FX(ptfx) STREAMING.REMOVE_NAMED_PTFX_ASSET("scr_as_trans") end)
         menu.toggle_loop(TROLLING_LIST, "Launch Player", {""}, "", function() NET.COMMAND.LAUNCH_PLAYER(player_id) end, function() if veh ~= 0 and ENTITY.DOES_ENTITY_EXIST(veh) then entities.delete(veh) end end)
@@ -2652,6 +2652,7 @@ util.create_tick_handler(function()
     -- Menu stuff
     NET.FUNCTION.UPDATE_MENU()
     NET.FUNCTION.CHECK_FOR_2TAKE1()
+    NET.FUNCTION.CHECK_FOR_YIM()
     NET.COMMAND.PUNISH_SPECTATORS()
     if NET.VARIABLE.No_Modders_Session then NET.FUNCTION.KICK_MODDERS() end
     util.yield(1000)
