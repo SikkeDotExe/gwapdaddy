@@ -13,7 +13,7 @@
 ]]
 
 IN_DEV = false
-VERSION = "1.0.1"
+VERSION = "1.1"
 
 -- Libraries
 util.require_natives(1676318796)
