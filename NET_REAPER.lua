@@ -238,7 +238,7 @@ NET = {
             {Name = "Modded Bounty", Threat = 1},
             {Name = "Modded Explosion", Threat = 1},
             {Name = "Attacking While Invulnerable", Threat = 1},
-            {Name = "YimMenu User", Threat = 0},
+            {Name = "YimMenu User", Threat = 0}, -- Detects Yim Skids & Ethereal.
         },
 
         NOTIFICATION_COLOR = {
@@ -2453,7 +2453,6 @@ NET = {
         menu.action(CRASH_OPTIONS, "[RYZE] Lamp Crash", {"lcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.LAMP(player_id) end)
         menu.action(CRASH_OPTIONS, "[RYZE] Task Crash", {"tcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.TASK(player_id) end)
         local TROLLING_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Trolling")
-        menu.action(TROLLING_LIST, "Kill", {}, "Blocked by most menus.", function() NET.COMMAND.KILL_PLAYER(player_id) end)
         menu.divider(TROLLING_LIST, "Unblockable & Undetected")
         menu.toggle_loop(TROLLING_LIST, "Smokescreen", {""}, "Fills up their screen with black smoke.", function() NET.COMMAND.SMOKESCREEN_PLAYER(player_id) end, function() local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id) GRAPHICS.REMOVE_PARTICLE_FX(ptfx) STREAMING.REMOVE_NAMED_PTFX_ASSET("scr_as_trans") end)
         menu.toggle_loop(TROLLING_LIST, "Launch Player", {""}, "", function() NET.COMMAND.LAUNCH_PLAYER(player_id) end, function() if veh ~= 0 and ENTITY.DOES_ENTITY_EXIST(veh) then entities.delete(veh) end end)
