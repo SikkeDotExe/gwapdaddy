@@ -12,6 +12,8 @@
                                                                |__/                           
 ]]
 
+-- OPTIMIZE
+
 IN_DEV = false
 VERSION = "1.1"
 
