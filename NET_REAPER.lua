@@ -12,10 +12,16 @@
                                                                |__/                           
 ]]
 
--- OPTIMIZE
+--[[
+Version 1.2
+[+] Added Mailbomb kick
+[+] Added Script-Host Kick
+[~] Fixed Kick All
+[~] Fixed Modders Removal Kicking Friends
+]]
 
 IN_DEV = false
-VERSION = "1.1"
+VERSION = "1.2"
 
 -- Libraries
 util.require_natives(1676318796)
@@ -241,21 +247,6 @@ NET = {
             {Name = "Modded Explosion", Threat = 1},
             {Name = "Attacking While Invulnerable", Threat = 1},
             {Name = "YimMenu User", Threat = 0}, -- Detects Yim Skids & Ethereal.
-        },
-
-        NOTIFICATION_COLOR = {
-            Normal = "2",
-            Grey = "5",
-            Red = "6",
-            Light_Blue = "9",
-            Yellow = "12",
-            Purple = "21",
-            Pink = "24",
-            Green = "25",
-            Light_Pink = "30",
-            Teal = "37",
-            Lime = "46",
-            Orange = "130",
         },
 
         RADIO = {
@@ -533,6 +524,48 @@ NET = {
     },
 
     FUNCTION = {
+        GET_PLAYERS_FROM_SELECTION = function()
+            local Table = {}
+            local Table_SANITIZED = {}
+
+            if NET.VARIABLE.Players_To_Affect == 1 then
+                Table = players.list(false)
+            end
+        
+            if NET.VARIABLE.Players_To_Affect == 2 then
+                local Players = players.list(false)
+                for next = 1, #Players do
+                    if players.is_marked_as_modder(Players[next]) then
+                        table.insert(Table, Players[next])
+                    end
+                end
+            end
+        
+            if NET.VARIABLE.Players_To_Affect == 3 then
+                Table = players.list(false, false)
+            end
+        
+            if NET.VARIABLE.Players_To_Affect == 4 then
+                local Players = players.list(false)
+                for next = 1, #Players do
+                    if not players.is_marked_as_modder(Players[next]) then
+                        table.insert(Table, Players[next])
+                    end
+                end
+            end
+        
+            for next = 1, #Table do
+                if players.exists(Table[next]) then
+                    if NET.VARIABLE.Ignore_Host and players.get_host() == Table[next] then return end
+                    if NET.VARIABLE.Ignore_Modded_Stats and NET.FUNCTION.IS_PLAYER_STATS_MODDED(Table[next]) then return end
+                    table.insert(Table_SANITIZED, Table[next])
+                end
+                util.yield(100)
+            end
+
+            return Table_SANITIZED
+        end,
+
         GET_PLAYER_FROM_ARG = function(whofired, input)
             if not input or string.lower(input) == "me" or tonumber(input) ~= nil then
                 return {whofired}
@@ -654,11 +687,7 @@ NET = {
         
             if player_id ~= players.get_host() then
                 menu.trigger_commands("loveletterkick"..TargetName)
-            end
-        
-            util.yield(5000)
-        
-            if players.exists(player_id) then
+            else
                 menu.trigger_commands("hostkick"..TargetName)
                 menu.trigger_commands("nonhostkick"..TargetName)
             end
@@ -831,7 +860,7 @@ NET = {
         end,
 
         KICK_MODDERS = function()
-            local Players = players.list(false)
+            local Players = players.list(false, false)
             for next = 1, #Players do
                 if players.is_marked_as_modder(Players[next]) then
                     NET.FUNCTION.KICK_PLAYER(Players[next])
@@ -910,7 +939,7 @@ NET = {
                 end
             end,
 
-            NONHOST = function(player_id)
+            LITTLE = function(player_id) -- (S0) (S1) (S2) (S3) (S4)
                 menu.trigger_commands("givesh"..players.get_name(player_id))
                 -- S1
                 NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {256, 654906418})
@@ -941,6 +970,67 @@ NET = {
                 NET.FUNCTION.FIRE_EVENT(-445044249, player_id, {256, 28, -1, -1})
             end,
 
+            BIG = function(player_id) -- (S0) (S1) (S3) (S4)
+                -- Missing (Kick P0) (Modded Event Q3)
+                menu.trigger_commands("givesh"..players.get_name(player_id))
+                NET.FUNCTION.BLOCK_SYNCS(player_id, function() end)
+                -- (S1)
+                NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {4, 186774466})
+                --(S3)
+                NET.FUNCTION.FIRE_EVENT(904539506, player_id, {4, 180220781})
+                --(S0)
+                NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {4, 1870799819, 0, 0})
+                --(S3)
+                NET.FUNCTION.FIRE_EVENT(-800312339, player_id, {4, 0, 1281769980})
+                NET.FUNCTION.FIRE_EVENT(630191280, player_id, {4, 26449345, 284885813, 242240238, 0, 0, 1961060661, 0})
+                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {4, 528467425, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1})
+                NET.FUNCTION.FIRE_EVENT(921195243, player_id, {4, 1040047737, 0})
+                NET.FUNCTION.FIRE_EVENT(728200248, player_id, {4, 1522943058, 341846771})
+                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {4, 0, 0, 0, 2029817797, 0, 0})
+                --(S0)
+                NET.FUNCTION.FIRE_EVENT(623462469, player_id, {4})
+                NET.FUNCTION.FIRE_EVENT(-2102799478, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(1980857009, player_id, {4})
+                NET.FUNCTION.FIRE_EVENT(-2051197492, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                --(S3)
+                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {4, 528467425, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1})
+                NET.FUNCTION.FIRE_EVENT(921195243, player_id, {4, 1040047737, 0})
+                NET.FUNCTION.FIRE_EVENT(728200248, player_id, {4, 1522943058, 341846771})
+                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {4, 0, 0, 0, 2029817797, 0, 0})
+                --(S0)
+                NET.FUNCTION.FIRE_EVENT(623462469, player_id, {4})
+                NET.FUNCTION.FIRE_EVENT(-2102799478, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(1980857009, player_id, {4})
+                NET.FUNCTION.FIRE_EVENT(-2051197492, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1013606569, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1101672680, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-353458099, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                --(MS3)
+                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {4})
+                --(S4)
+                NET.FUNCTION.FIRE_EVENT(1269949700, player_id, {4, 0, 2147483647})
+                NET.FUNCTION.FIRE_EVENT(-1547064369, player_id, {4, 0, 2147483647})
+                NET.FUNCTION.FIRE_EVENT(-2122488865, player_id, {4, 0, 2147483647})
+                NET.FUNCTION.FIRE_EVENT(-2026172248, player_id, {4, 0, 0, 0, 1})
+                --(S0)
+                NET.FUNCTION.FIRE_EVENT(-1013606569, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1101672680, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-353458099, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                --(MS3)
+                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {4})
+                --(S4)
+                NET.FUNCTION.FIRE_EVENT({1269949700, player_id, 4, 0, 2147483647})
+                NET.FUNCTION.FIRE_EVENT({-1547064369, player_id, 4, 0, 2147483647})
+                NET.FUNCTION.FIRE_EVENT({-2122488865, player_id, 4, 0, 2147483647})
+                NET.FUNCTION.FIRE_EVENT({-2026172248, player_id, 4, 0, 0, 0, 1})
+            end,
+
+            MAILBOMB = function(player_id) -- (S5)
+                menu.trigger_commands("givesh"..players.get_name(player_id))
+                NET.FUNCTION.BLOCK_SYNCS(player_id, function() end)
+                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {67108864, 122, 1})
+            end,
+
             AGGRESSIVE = function(player_id)
                 NET.FUNCTION.KICK_PLAYER(player_id)
             end,
@@ -954,7 +1044,7 @@ NET = {
         
                 elseif TargetName == HostName then -- If the player is host.
                     if NET.FUNCTION.IS_PLAYER_A_THREAT(player_id) then
-                        Notify("Unable to get rid of player.", Notification_Colors.Red)
+                        util.toast("Aborting.. Target is host and has been recognized as a threat.\nConsider switching session.")
                         return
                     end
         
@@ -1633,7 +1723,6 @@ NET = {
             if NET.FUNCTION.IS_NET_PLAYER_OK(players.user()) then
                 if players.get_host() ~= players.user() then
                     if players.get_host_queue_position(players.user()) == 1 and not NET.FUNCTION.IS_PLAYER_A_THREAT(players.get_host()) then
-                        NET.FUNCTION.NOTIFY("Host has not been recognized as a threat, removing player..", NET.TABLE.NOTIFICATION_COLOR.Green)
                         local Current_Host = players.get_host()
                         if NET.VARIABLE.Host_Addict_Kick_Cooldown == 15 then
                             if players.exists(Current_Host) then
@@ -1774,38 +1863,10 @@ NET = {
         end,
 
         KICK_PLAYERS = function()
-            local ToKick = {}
-
-            if NET.VARIABLE.Players_To_Affect == 1 then
-                ToKick = players.list(false)
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 2 then
-                local Players = players.list(false)
-                for next = 1, #Players do
-                    if players.is_marked_as_modder(Players[next]) then
-                        table.insert(ToKick, Players[next])
-                    end
-                end
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 3 then
-                ToKick = players.list(false, false)
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 4 then
-                local Players = players.list(false)
-                for next = 1, #Players do
-                    if not players.is_marked_as_modder(Players[next]) then
-                        table.insert(ToKick, Players[next])
-                    end
-                end
-            end
+            local ToKick = NET.FUNCTION.GET_PLAYERS_FROM_SELECTION()
         
             for next = 1, #ToKick do
                 if players.exists(ToKick[next]) then
-                    if NET.VARIABLE.Ignore_Host and players.get_host() == ToKick[next] then return end
-                    if NET.VARIABLE.Ignore_Modded_Stats and NET.FUNCTION.IS_PLAYER_STATS_MODDED(ToKick[next]) then return end
                     local PlayerName = players.get_name(ToKick[next])
                     if NET.VARIABLE.Kick_Method == 1 then -- Unfair
                         NET.COMMAND.KICK.UNFAIR(ToKick[next])
@@ -1827,39 +1888,10 @@ NET = {
         end,
 
         CRASH_PLAYERS = function()
-            local ToCrash = {}
-            local Players = players.list(false)
-        
-            if NET.VARIABLE.Players_To_Affect == 1 then
-                ToCrash = players.list(false)
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 2 then
-                local Players = players.list(false)
-                for next = 1, #Players do
-                    if players.is_marked_as_modder(Players[next]) then
-                        table.insert(ToCrash, Players[next])
-                    end
-                end
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 3 then
-                ToCrash = players.list(false, false)
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 4 then
-                local Players = players.list(false)
-                for next = 1, #Players do
-                    if not players.is_marked_as_modder(Players[next]) then
-                        table.insert(ToCrash, Players[next])
-                    end
-                end
-            end
+            local ToCrash = NET.FUNCTION.GET_PLAYERS_FROM_SELECTION()
         
             for next = 1, #ToCrash do
                 if players.exists(ToCrash[next]) then
-                    if NET.VARIABLE.Ignore_Host and players.get_host() == ToCrash[next] then return end
-                    if NET.VARIABLE.Ignore_Modded_Stats and NET.FUNCTION.IS_PLAYER_STATS_MODDED(ToCrash[next]) then return end
                     local PlayerName = players.get_name(ToCrash[next])
                     if NET.VARIABLE.Crash_Method == 1 then -- Express
                         NET.COMMAND.CRASH.EXPRESS(ToCrash[next])
@@ -2091,38 +2123,10 @@ NET = {
         FREEBIES = function(Enabled)
             menu.trigger_commands("rplobby "..(Enabled and "on" or "off"))
             
-            local ToGive = {}
-
-            if NET.VARIABLE.Players_To_Affect == 1 then
-                ToGive = players.list(false)
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 2 then
-                local Players = players.list(false)
-                for next = 1, #Players do
-                    if players.is_marked_as_modder(Players[next]) then
-                        table.insert(ToGive, Players[next])
-                    end
-                end
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 3 then
-                ToGive = players.list(false, false)
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 4 then
-                local Players = players.list(false)
-                for next = 1, #Players do
-                    if not players.is_marked_as_modder(Players[next]) then
-                        table.insert(ToGive, Players[next])
-                    end
-                end
-            end
+            local ToGive = NET.FUNCTION.GET_PLAYERS_FROM_SELECTION()
         
             for next = 1, #ToGive do
                 if players.exists(ToGive[next]) then
-                    if NET.VARIABLE.Ignore_Host and players.get_host() == ToGive[next] then return end
-                    if NET.VARIABLE.Ignore_Modded_Stats and NET.FUNCTION.IS_PLAYER_STATS_MODDED(ToGive[next]) then return end
                     NET.COMMAND.GIVE_PLAYER_FREEBIES(ToGive[next], Enabled)
                     util.yield(100)
                 end
@@ -2132,76 +2136,20 @@ NET = {
         end,
 
         GIVE_PLAYERS_RP = function()
-            local ToGive = {}
-
-            if NET.VARIABLE.Players_To_Affect == 1 then
-                ToGive = players.list(false)
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 2 then
-                local Players = players.list(false)
-                for next = 1, #Players do
-                    if players.is_marked_as_modder(Players[next]) then
-                        table.insert(ToGive, Players[next])
-                    end
-                end
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 3 then
-                ToGive = players.list(false, false)
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 4 then
-                local Players = players.list(false)
-                for next = 1, #Players do
-                    if not players.is_marked_as_modder(Players[next]) then
-                        table.insert(ToGive, Players[next])
-                    end
-                end
-            end
+            local ToGive = NET.FUNCTION.GET_PLAYERS_FROM_SELECTION()
         
             for next = 1, #ToGive do
                 if players.exists(ToGive[next]) then
-                    if NET.VARIABLE.Ignore_Host and players.get_host() == ToGive[next] then return end
-                    if NET.VARIABLE.Ignore_Modded_Stats and NET.FUNCTION.IS_PLAYER_STATS_MODDED(ToGive[next]) then return end
                     NET.COMMAND.GIVE_PLAYER_RP(ToGive[next], 0)
                 end
             end
         end,
 
         GHOST_PLAYERS = function(Enabled)
-            local ToGhost = {}
-
-            if NET.VARIABLE.Players_To_Affect == 1 then
-                ToGhost = players.list(false)
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 2 then
-                local Players = players.list(false)
-                for next = 1, #Players do
-                    if players.is_marked_as_modder(Players[next]) then
-                        table.insert(ToGhost, Players[next])
-                    end
-                end
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 3 then
-                ToGhost = players.list(false, false)
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 4 then
-                local Players = players.list(false)
-                for next = 1, #Players do
-                    if not players.is_marked_as_modder(Players[next]) then
-                        table.insert(ToGhost, Players[next])
-                    end
-                end
-            end
+            local ToGhost = NET.FUNCTION.GET_PLAYERS_FROM_SELECTION()
         
             for next = 1, #ToGhost do
                 if players.exists(ToGhost[next]) then
-                    if NET.VARIABLE.Ignore_Host and players.get_host() == ToGhost[next] then return end
-                    if NET.VARIABLE.Ignore_Modded_Stats and NET.FUNCTION.IS_PLAYER_STATS_MODDED(ToGhost[next]) then return end
                     NETWORK.SET_REMOTE_PLAYER_AS_GHOST(ToGhost[next], Enabled)
                 end
             end
@@ -2210,33 +2158,7 @@ NET = {
         end,
 
         SUMMON_PLAYERS = function()
-            local ToTP = {}
-
-            if NET.VARIABLE.Players_To_Affect == 1 then
-                ToTP = players.list(false)
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 2 then
-                local Players = players.list(false)
-                for next = 1, #Players do
-                    if players.is_marked_as_modder(Players[next]) then
-                        table.insert(ToTP, Players[next])
-                    end
-                end
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 3 then
-                ToTP = players.list(false, false)
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 4 then
-                local Players = players.list(false)
-                for next = 1, #Players do
-                    if not players.is_marked_as_modder(Players[next]) then
-                        table.insert(ToTP, Players[next])
-                    end
-                end
-            end
+            local ToTP = NET.FUNCTION.GET_PLAYERS_FROM_SELECTION()
         
             for next = 1, #ToTP do
                 if players.exists(ToTP[next]) then
@@ -2247,33 +2169,7 @@ NET = {
         end,
 
         TELEPORT_PLAYERS_TO_WAYPOINT = function()
-            local ToTP = {}
-
-            if NET.VARIABLE.Players_To_Affect == 1 then
-                ToTP = players.list(false)
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 2 then
-                local Players = players.list(false)
-                for next = 1, #Players do
-                    if players.is_marked_as_modder(Players[next]) then
-                        table.insert(ToTP, Players[next])
-                    end
-                end
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 3 then
-                ToTP = players.list(false, false)
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 4 then
-                local Players = players.list(false)
-                for next = 1, #Players do
-                    if not players.is_marked_as_modder(Players[next]) then
-                        table.insert(ToTP, Players[next])
-                    end
-                end
-            end
+            local ToTP = NET.FUNCTION.GET_PLAYERS_FROM_SELECTION()
         
             for next = 1, #ToTP do
                 if players.exists(ToTP[next]) then
@@ -2284,33 +2180,7 @@ NET = {
         end,
 
         TELEPORT_PLAYERS_TO_CASINO = function()
-            local ToTP = {}
-
-            if NET.VARIABLE.Players_To_Affect == 1 then
-                ToTP = players.list(false)
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 2 then
-                local Players = players.list(false)
-                for next = 1, #Players do
-                    if players.is_marked_as_modder(Players[next]) then
-                        table.insert(ToTP, Players[next])
-                    end
-                end
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 3 then
-                ToTP = players.list(false, false)
-            end
-        
-            if NET.VARIABLE.Players_To_Affect == 4 then
-                local Players = players.list(false)
-                for next = 1, #Players do
-                    if not players.is_marked_as_modder(Players[next]) then
-                        table.insert(ToTP, Players[next])
-                    end
-                end
-            end
+            local ToTP = NET.FUNCTION.GET_PLAYERS_FROM_SELECTION()
         
             for next = 1, #ToTP do
                 if players.exists(ToTP[next]) then
@@ -2436,7 +2306,9 @@ NET = {
         local KICK_OPTIONS = menu.list(MODERATE_LIST, "Kicks")
         menu.action(KICK_OPTIONS, "[STAND] Wrath Kick", {"wkick"}, "Will try to get host to kick target if available. If not, will try everything to get rid of the target.", function() NET.COMMAND.KICK.WRATH(player_id) end)
         menu.action(KICK_OPTIONS, "[STAND] Aggressive Kick", {"akick"}, "Very effective agaisn't modders with protections.", function() NET.COMMAND.KICK.AGGRESSIVE(player_id) end)
-        menu.action(KICK_OPTIONS, "[NET] Non-Host Kick", {"nhkick"}, "Effective agaisn't modders with protections.\nKnockoff of Stand's Non-Host Kick.", function() NET.COMMAND.KICK.NONHOST(player_id) end)
+        menu.action(KICK_OPTIONS, "[NET] Big Kick", {"bigkick"}, "Effective agaisn't modders with protections.\nPartial knockoff of Stand's Host Kick.", function() NET.COMMAND.KICK.NONHOST(player_id) end)
+        menu.action(KICK_OPTIONS, "[NET] Little Kick", {"litkick"}, "Effective agaisn't modders with protections.\nKnockoff of Stand's Non-Host Kick.", function() NET.COMMAND.KICK.NONHOST(player_id) end)
+        menu.action(KICK_OPTIONS, "[NET] Mailbomb Kick", {"mbkick"}, "Blocked by popular menus.", function() NET.COMMAND.KICK.MAILBOMB(player_id) end)
         menu.action(KICK_OPTIONS, "[NET] NET Kick", {"netkick"}, "Just like unfair but different method.", function() NET.COMMAND.KICK.NET(player_id) end)
         menu.action(KICK_OPTIONS, "[ADDICT] Eviction Notice", {"ekick"}, "Blocked by popular menus.", function() NET.COMMAND.KICK.EVICTION_NOTICE(player_id) end)
         menu.action(KICK_OPTIONS, "[ADDICT] Unfair Kick", {"se3kick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.UNFAIR(player_id) end)
@@ -2522,7 +2394,7 @@ NET = {
 }
 
 -- Main Options
-local Title = menu.divider(menu.my_root(), "NET.REAPER V2")
+local Title = menu.divider(menu.my_root(), "NET.REAPER")
 local SELF_LIST = menu.list(menu.my_root(), "Self")
 menu.toggle_loop(SELF_LIST, "Vanity Particles", {}, "", function(Enabled) NET.COMMAND.VANITY_PARTICLES(players.user()) end)
 local PROFILES_LIST = menu.list(SELF_LIST, "Profiles")
