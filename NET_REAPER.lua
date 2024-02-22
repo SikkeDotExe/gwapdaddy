@@ -13,15 +13,25 @@
 ]]
 
 --[[
-Version 1.2
-[+] Added Mailbomb kick
-[+] Added Script-Host Kick
-[~] Fixed Kick All
-[~] Fixed Modders Removal Kicking Friends
+Version 1.3
+[+] Added Backstab Kick
+[+] Added Stand's Love Letter Kick
+[+] Added Stand's Host Kick
+[~] Improved Give All Collectibles
+[~] Improved RP Loop
+[~] Fixed Little Kick
+[~] Fixed Big Kick
+[~] More Backend Fixes
+[-] Removed Eviction Notice from Kick All
+[-] Removed Unfair Kick from Kick All
+
+TODO
+1) Redo PlayerList
+2) Add Individual Kicks and Crashes from Stand instead of aggressive kick.
 ]]
 
 IN_DEV = false
-VERSION = "1.2"
+VERSION = "1.3"
 
 -- Libraries
 util.require_natives(1676318796)
@@ -80,11 +90,10 @@ NET = {
         Players_To_Affect = 1,
         Ignore_Host = false,
         Ignore_Modded_Stats = false,
-        Kick_Method = 3,
+        Kick_Method = 1,
         Crash_Method = 3,
 
         To_Level_Up_To = 120,
-        RP_Loop = false,
 
         Current_Profile = 1,
 
@@ -414,12 +423,11 @@ NET = {
                 {4, "Plebs"},
             },
             KICK = {
-                {1, "[ADDICT] Unfair"},
-                {2, "[ADDICT] Eviction Notice"},
-                {3, "[STAND] Aggressive"},
-                {4, "[HOST] Host"},
-                {5, "[HOST] Ban"},
-                {6, "[HOST] Blacklist"},
+                {1, "[NET] Backstab"},
+                {2, "[STAND] Aggressive"},
+                {3, "[STAND] Host"},
+                {4, "[HOST] Ban"},
+                {5, "[HOST] Blacklist"},
             },
             CRASH = {
                 {1, "[NET] Express"},
@@ -556,11 +564,12 @@ NET = {
         
             for next = 1, #Table do
                 if players.exists(Table[next]) then
-                    if NET.VARIABLE.Ignore_Host and players.get_host() == Table[next] then return end
-                    if NET.VARIABLE.Ignore_Modded_Stats and NET.FUNCTION.IS_PLAYER_STATS_MODDED(Table[next]) then return end
-                    table.insert(Table_SANITIZED, Table[next])
+                    if NET.VARIABLE.Ignore_Host and players.get_host() == Table[next] then
+                    elseif NET.VARIABLE.Ignore_Modded_Stats and NET.FUNCTION.IS_PLAYER_STATS_MODDED(Table[next]) then
+                    else
+                        table.insert(Table_SANITIZED, Table[next])
+                    end
                 end
-                util.yield(100)
             end
 
             return Table_SANITIZED
@@ -727,10 +736,17 @@ NET = {
             table.insert(args, 1, first_arg)
             util.trigger_script_event(1 << receiver, args)
         end,
-        
-        TRIGGER_COLLECTIBLE_LOOP = function(player_id, i)
-            if players.get_rank(player_id) >= NET.VARIABLE.To_Level_Up_To then return end
-            NET.FUNCTION.FIRE_EVENT(968269233, player_id, {players.user(), 4, i, 1, 1, 1})
+
+        TRIGGER_GIVE_ALL_COLLECTIBLES = function(player_id)
+            for next = 0, 20 do
+                for zext = 0, 100 do
+                    if next == 4 and zext > 24 then
+                        -- Kick Event (S0)
+                    else
+                        NET.FUNCTION.FIRE_EVENT(968269233, player_id, {players.user(), next, zext, 1, 1, 1})
+                    end
+                end
+            end
         end,
         
         CHANGE_MENU_REACTIONS = function(PATH, NOTIFICATION_BOOL, BLOCK_BOOL, KICK_BOOL, LOVE_LETTER_KICK_BOOL, BLACKLIST_KICK_BOOL, CRASH_BOOL)
@@ -900,6 +916,12 @@ NET = {
                 menu.trigger_commands("aids"..TargetName)
             end,
 
+            BACKSTAB = function(player_id)
+                for next = 1, 15 do
+                    NET.FUNCTION.FIRE_EVENT(968269233, player_id, {players.user(), 4, math.random(25, 100), 1, 1, 1})
+                end
+            end,
+
             NET = function(player_id) -- (S3)
                 menu.trigger_commands("givesh" .. players.get_name(player_id))
                 NET.FUNCTION.FIRE_EVENT(921195243, player_id, {64,20,0})
@@ -939,7 +961,7 @@ NET = {
                 end
             end,
 
-            LITTLE = function(player_id) -- (S0) (S1) (S2) (S3) (S4)
+            LITTLE = function(player_id) -- (S0) (S1) (S2) (S3) (S4) / Stand's Non-Host Kick
                 menu.trigger_commands("givesh"..players.get_name(player_id))
                 -- S1
                 NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {256, 654906418})
@@ -974,7 +996,7 @@ NET = {
                 -- Missing (Kick P0) (Modded Event Q3)
                 menu.trigger_commands("givesh"..players.get_name(player_id))
                 NET.FUNCTION.BLOCK_SYNCS(player_id, function() end)
-                -- (S1)
+                --(S1)
                 NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {4, 186774466})
                 --(S3)
                 NET.FUNCTION.FIRE_EVENT(904539506, player_id, {4, 180220781})
@@ -1019,10 +1041,10 @@ NET = {
                 --(MS3)
                 NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {4})
                 --(S4)
-                NET.FUNCTION.FIRE_EVENT({1269949700, player_id, 4, 0, 2147483647})
-                NET.FUNCTION.FIRE_EVENT({-1547064369, player_id, 4, 0, 2147483647})
-                NET.FUNCTION.FIRE_EVENT({-2122488865, player_id, 4, 0, 2147483647})
-                NET.FUNCTION.FIRE_EVENT({-2026172248, player_id, 4, 0, 0, 0, 1})
+                NET.FUNCTION.FIRE_EVENT(1269949700, player_id, {4, 0, 2147483647})
+                NET.FUNCTION.FIRE_EVENT(-1547064369, player_id, {4, 0, 2147483647})
+                NET.FUNCTION.FIRE_EVENT(-2122488865, player_id, {4, 0, 2147483647})
+                NET.FUNCTION.FIRE_EVENT(-2026172248, player_id, {4, 0, 0, 0, 1})
             end,
 
             MAILBOMB = function(player_id) -- (S5)
@@ -1299,7 +1321,7 @@ NET = {
                 end
             end,
 
-            ELEGANT = function(player_id) -- (S3) (STAND'S ELEGANT CRASH)
+            EXPRESS = function(player_id) -- (S3) (STAND'S ELEGANT CRASH)
                 local int_min = -2147483647
                 local int_max = 2147483647
                 for next = 1, 30 do
@@ -1868,17 +1890,15 @@ NET = {
             for next = 1, #ToKick do
                 if players.exists(ToKick[next]) then
                     local PlayerName = players.get_name(ToKick[next])
-                    if NET.VARIABLE.Kick_Method == 1 then -- Unfair
-                        NET.COMMAND.KICK.UNFAIR(ToKick[next])
-                    elseif NET.VARIABLE.Kick_Method == 2 then -- Eviction Notice
-                        NET.COMMAND.KICK.EVICTION_NOTICE(ToKick[next])
-                    elseif NET.VARIABLE.Kick_Method == 3 then -- Aggressive
+                    if NET.VARIABLE.Kick_Method == 1 then -- Backstab / (S0)
+                        NET.COMMAND.KICK.BACKSTAB(ToKick[next])
+                    elseif NET.VARIABLE.Kick_Method == 2 then -- Aggressive / Love Letter + Host + Non-Host
                         NET.COMMAND.KICK.AGGRESSIVE(ToKick[next])
-                    elseif NET.VARIABLE.Kick_Method == 4 then -- Host Kick / Votekick
+                    elseif NET.VARIABLE.Kick_Method == 3 then -- Host Kick / Votekick
                         menu.trigger_commands("hostkick"..PlayerName)
-                    elseif NET.VARIABLE.Kick_Method == 5 then -- Ban / "Player has been removed for cheating"
+                    elseif NET.VARIABLE.Kick_Method == 4 then -- Ban / "Player has been removed for cheating"
                         menu.trigger_commands("ban"..PlayerName)
-                    elseif NET.VARIABLE.Kick_Method == 6 then -- Desync Kick
+                    elseif NET.VARIABLE.Kick_Method == 5 then -- Desync Kick
                         menu.trigger_commands("blacklist"..PlayerName)
                     end
                 end
@@ -1907,17 +1927,22 @@ NET = {
         end,
 
         GIVE_PLAYER_RP = function(player_id, delay)
+            local GIVE_COLLECTIBLE = function(player_id, i)
+                if players.get_rank(player_id) >= NET.VARIABLE.To_Level_Up_To then return end
+                NET.FUNCTION.FIRE_EVENT(968269233, player_id, {players.user(), 4, i, 1, 1, 1})
+            end
+
             if not delay then delay = 5 end
 
             if delay == 0 then
                 for i = 20, 24 do
-                    NET.FUNCTION.TRIGGER_COLLECTIBLE_LOOP(player_id, i)
+                    GIVE_COLLECTIBLE(player_id, i)
                 end
             elseif delay == 5 then
-                NET.FUNCTION.TRIGGER_COLLECTIBLE_LOOP(player_id, math.random(20, 24)) -- limiting the amount of script events sent to prevent a fatal error
+                GIVE_COLLECTIBLE(player_id, math.random(20, 24)) -- limiting the amount of script events sent to prevent a fatal error
             else
                 for i = 20, 24 do
-                    NET.FUNCTION.TRIGGER_COLLECTIBLE_LOOP(player_id, i)
+                    GIVE_COLLECTIBLE(player_id, i)
                 end
                 util.yield(delay)
             end
@@ -2115,7 +2140,7 @@ NET = {
             local Player_Name = players.get_name(player_id)
             menu.trigger_commands("commendhelpful"..Player_Name)
             menu.trigger_commands("commendfriendly"..Player_Name)
-            menu.trigger_commands("givecollectibles"..Player_Name)
+            NET.FUNCTION.TRIGGER_GIVE_ALL_COLLECTIBLES(player_id)
             menu.trigger_commands("arm"..Player_Name.."all")
             menu.trigger_commands("ceopay"..Player_Name..(Enabled and " on" or " off"))
         end,
@@ -2124,15 +2149,12 @@ NET = {
             menu.trigger_commands("rplobby "..(Enabled and "on" or "off"))
             
             local ToGive = NET.FUNCTION.GET_PLAYERS_FROM_SELECTION()
-        
             for next = 1, #ToGive do
                 if players.exists(ToGive[next]) then
                     NET.COMMAND.GIVE_PLAYER_FREEBIES(ToGive[next], Enabled)
                     util.yield(100)
                 end
             end
-
-            NET.VARIABLE.RP_Loop = Enabled
         end,
 
         GIVE_PLAYERS_RP = function()
@@ -2273,7 +2295,6 @@ NET = {
     CREATE_NET_PROFILE = function(player_id)
         if NET.VARIABLE.Players_To_Affect == 2 and not players.is_marked_as_modder(player_id) then return end
         if NET.VARIABLE.Players_To_Affect == 4 and players.is_marked_as_modder(player_id) then return end
-
         NET.VARIABLE.Players_Count = NET.VARIABLE.Players_Count + 1
         NET.PROFILE[tostring(player_id)] = {}
         NET.PROFILE[tostring(player_id)].Menu = menu.list(PLAYERS_LIST, players.get_name(player_id), {}, "")
@@ -2304,20 +2325,23 @@ NET = {
         menu.toggle(NET.PROFILE[tostring(player_id)].Menu, "Pacify", {}, "Blocked by most menus, will also most likely ruin the player's scripts.", function(Enabled) NET.COMMAND.PACIFY_PLAYER(player_id, Enabled) end)
         local MODERATE_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Moderate")
         local KICK_OPTIONS = menu.list(MODERATE_LIST, "Kicks")
-        menu.action(KICK_OPTIONS, "[STAND] Wrath Kick", {"wkick"}, "Will try to get host to kick target if available. If not, will try everything to get rid of the target.", function() NET.COMMAND.KICK.WRATH(player_id) end)
-        menu.action(KICK_OPTIONS, "[STAND] Aggressive Kick", {"akick"}, "Very effective agaisn't modders with protections.", function() NET.COMMAND.KICK.AGGRESSIVE(player_id) end)
-        menu.action(KICK_OPTIONS, "[NET] Big Kick", {"bigkick"}, "Effective agaisn't modders with protections.\nPartial knockoff of Stand's Host Kick.", function() NET.COMMAND.KICK.NONHOST(player_id) end)
-        menu.action(KICK_OPTIONS, "[NET] Little Kick", {"litkick"}, "Effective agaisn't modders with protections.\nKnockoff of Stand's Non-Host Kick.", function() NET.COMMAND.KICK.NONHOST(player_id) end)
-        menu.action(KICK_OPTIONS, "[NET] Mailbomb Kick", {"mbkick"}, "Blocked by popular menus.", function() NET.COMMAND.KICK.MAILBOMB(player_id) end)
-        menu.action(KICK_OPTIONS, "[NET] NET Kick", {"netkick"}, "Just like unfair but different method.", function() NET.COMMAND.KICK.NET(player_id) end)
-        menu.action(KICK_OPTIONS, "[ADDICT] Eviction Notice", {"ekick"}, "Blocked by popular menus.", function() NET.COMMAND.KICK.EVICTION_NOTICE(player_id) end)
-        menu.action(KICK_OPTIONS, "[ADDICT] Unfair Kick", {"se3kick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.UNFAIR(player_id) end)
-        menu.action(KICK_OPTIONS, "[STAND] Legit Kick", {"lkick"}, "Don't use agaisn't modders.", function() NET.COMMAND.KICK.LEGIT(player_id) end)
+        menu.action(KICK_OPTIONS, "[STAND] Wrath Kick", {"wkick"}, "Will try to get host to kick target if available. If not, will fallback onto Aggressive Kick.", function() NET.COMMAND.KICK.WRATH(player_id) end)
+        menu.action(KICK_OPTIONS, "[STAND] Aggressive Kick", {"akick"}, "Unblockable if target isn't host & detected as a threat.", function() NET.COMMAND.KICK.AGGRESSIVE(player_id) end)
+        menu.action(KICK_OPTIONS, "[STAND] Love Letter Kick", {}, "Discrete and unblockable.\nCannot be used against host.\nUnblockable when you are host.", function() menu.trigger_commands("loveletterkick"..players.get_name(player_id)) end)
+        menu.action(KICK_OPTIONS, "[STAND] Host Kick", {}, "Very effective against modders with protections.\nUnblockable when you are host.", function() menu.trigger_commands("hostkick"..players.get_name(player_id)) end)
+        menu.action(KICK_OPTIONS, "[NET] Big Kick", {"bigkick"}, "Effective against modders with protections.", function() NET.COMMAND.KICK.BIG(player_id) end)
+        menu.action(KICK_OPTIONS, "[NET] Little Kick", {"litkick"}, "Effective against modders with protections.", function() NET.COMMAND.KICK.LITTLE(player_id) end)
+        menu.action(KICK_OPTIONS, "[NET] Mailbomb Kick", {"mbkick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.MAILBOMB(player_id) end)
+        menu.action(KICK_OPTIONS, "[NET] Backstab Kick", {"stabkick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.BACKSTAB(player_id) end)
+        menu.action(KICK_OPTIONS, "[NET] NET Kick", {"netkick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.NET(player_id) end)
+        menu.action(KICK_OPTIONS, "[ADDICT] Eviction Notice", {"ekick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.EVICTION_NOTICE(player_id) end)
+        menu.action(KICK_OPTIONS, "[ADDICT] Unfair Kick", {"sekick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.UNFAIR(player_id) end)
+        menu.action(KICK_OPTIONS, "[STAND] Legit Kick", {"lkick"}, "Don't use against modders.", function() NET.COMMAND.KICK.LEGIT(player_id) end)
         local CRASH_OPTIONS = menu.list(MODERATE_LIST, "Crashes")
-        menu.action(CRASH_OPTIONS, "[STAND] 2Take1 Crash", {"2t1crash"}, "Blocked by popular menus.", function() NET.COMMAND.CRASH["2TAKE1"](player_id) end)
+        menu.action(CRASH_OPTIONS, "[STAND] 2Take1 Crash", {"2t1crash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH["2TAKE1"](player_id) end)
         menu.action(CRASH_OPTIONS, "[STAND] Warhead Crash", {"warcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.WARHEAD(player_id) end)
-        menu.action(CRASH_OPTIONS, "[NET] Mortar Crash", {""}, "Blocked by popular menus.", function() NET.COMMAND.CRASH.MORTAR(player_id) end)
-        menu.action(CRASH_OPTIONS, "[NET] Elegant Crash", {"elegantcrash"}, "Blocked by most menus.\nPartial knockoff of Stand's Elegant Crash.", function() NET.COMMAND.CRASH.ELEGANT(player_id) end)
+        menu.action(CRASH_OPTIONS, "[NET] Mortar Crash", {""}, "Blocked by most menus.", function() NET.COMMAND.CRASH.MORTAR(player_id) end)
+        menu.action(CRASH_OPTIONS, "[NET] Express Crash", {"xpresscrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.ELEGANT(player_id) end)
         menu.action(CRASH_OPTIONS, "[NET] Dynamite Crash", {"dcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.DYNAMITE(player_id) end)
         menu.action(CRASH_OPTIONS, "[NET] Chicken Crash", {"hencrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.CHICKEN(player_id) end)
         menu.action(CRASH_OPTIONS, "[NIGHT] Phantom Crash", {"phantomcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.PHANTOM(player_id) end)
@@ -2327,7 +2351,6 @@ NET = {
         menu.action(CRASH_OPTIONS, "[RYZE] Lamp Crash", {"lcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.LAMP(player_id) end)
         menu.action(CRASH_OPTIONS, "[RYZE] Task Crash", {"tcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.TASK(player_id) end)
         local TROLLING_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Trolling")
-        menu.divider(TROLLING_LIST, "Unblockable & Undetected")
         menu.toggle_loop(TROLLING_LIST, "Smokescreen", {""}, "Fills up their screen with black smoke.", function() NET.COMMAND.SMOKESCREEN_PLAYER(player_id) end, function() local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id) GRAPHICS.REMOVE_PARTICLE_FX(ptfx) STREAMING.REMOVE_NAMED_PTFX_ASSET("scr_as_trans") end)
         menu.toggle_loop(TROLLING_LIST, "Launch Player", {""}, "", function() NET.COMMAND.LAUNCH_PLAYER(player_id) end, function() if veh ~= 0 and ENTITY.DOES_ENTITY_EXIST(veh) then entities.delete(veh) end end)
         menu.toggle_loop(TROLLING_LIST, "Stumble Player", {""}, "", function() NET.COMMAND.STUMBLE_PLAYER(player_id) end)
@@ -2344,7 +2367,7 @@ NET = {
         local SPAWN_VEHICLE_LIST = menu.list(FRIENDLY_LIST, "Spawn Vehicle") for i, types in pairs(NET.TABLE.VEHICLE) do local LIST = menu.list(SPAWN_VEHICLE_LIST, tostring(i)) for j, k in pairs(types) do menu.action(LIST, "Spawn - "..tostring(k), {}, "", function() menu.trigger_commands("as "..players.get_name(player_id).." "..k) end) end end
         menu.toggle_loop(FRIENDLY_LIST, "RP Drop", {}, "Will give rp until player is level 120.", function() NET.COMMAND.GIVE_PLAYER_RP(player_id, 0) end)
         menu.toggle(FRIENDLY_LIST, "Money Drop", {}, "Limited money drop, must be close to player.", function(Enabled) NET.COMMAND.MONEY_DROP_PLAYER(player_id, Enabled) end)
-        menu.action(FRIENDLY_LIST, "Give All Collectibles", {}, "Up to $300k.\nCan only be used once per player.", function() menu.trigger_commands("givecollectibles"..players.get_name(player_id)) end)
+        menu.action(FRIENDLY_LIST, "Give All Collectibles", {}, "Up to $300k.\nCan only be used once per player.", function() NET.FUNCTION.TRIGGER_GIVE_ALL_COLLECTIBLES(player_id) end)--menu.trigger_commands("givecollectibles"..players.get_name(player_id)) end)
         menu.action(FRIENDLY_LIST, "Gift Spawned Vehicle", {}, "Spawn fully tuned deathbike2 for best results.\nPlayer must have full garage.\nGifts the latest spawned car.", function() menu.trigger_commands("gift"..players.get_name(player_id)) end)
         menu.toggle(FRIENDLY_LIST, "Helpful Events", {""}, "Never Wanted, Off The Radar, Vehicle God, Auto-Heal.", function(Enabled) NET.COMMAND.HELPFUL_EVENTS(player_id, Enabled) end)
         menu.action(FRIENDLY_LIST, "Fix Loading Screen", {"fix"}, "Useful when stuck in a loading screen.", function() NET.COMMAND.FIX_LOADING_SCREEN(player_id) end)
@@ -2430,7 +2453,7 @@ menu.toggle(PLAYERS_LIST, "Ignore Modded Stats", {}, "Ignores players with modde
 local ALL_PLAYERS_LIST = menu.list(PLAYERS_LIST, "All Players", {}, "Related to target.")
 local MODERATE_PLAYERS_LIST = menu.list(ALL_PLAYERS_LIST, "Moderate")
 menu.divider(MODERATE_PLAYERS_LIST, "Kicks") -- Kicks
-menu.list_select(MODERATE_PLAYERS_LIST, "Kick Method", {}, "", NET.TABLE.METHOD.KICK, 3, function(Value) NET.VARIABLE.Kick_Method = Value end)
+menu.list_select(MODERATE_PLAYERS_LIST, "Kick Method", {}, "", NET.TABLE.METHOD.KICK, 1, function(Value) NET.VARIABLE.Kick_Method = Value end)
 menu.action(MODERATE_PLAYERS_LIST, "Kick Players", {}, "", NET.COMMAND.KICK_PLAYERS)
 menu.divider(MODERATE_PLAYERS_LIST, "Crashes") -- Crashes
 menu.list_select(MODERATE_PLAYERS_LIST, "Crash Method", {}, "", NET.TABLE.METHOD.CRASH, 3, function(Value) NET.VARIABLE.Crash_Method = Value end)
@@ -2496,11 +2519,6 @@ players.on_join(function(player_id)
         NET.FUNCTION.KICK_PLAYER(player_id)
     end
 
-    if NET.VARIABLE.RP_Loop then
-        repeat util.yield(1000) until NET.FUNCTION.IS_NET_PLAYER_OK(player_id)
-        menu.trigger_commands("givecollectibles"..players.get_name(player_id))
-    end
-
     if NET.VARIABLE.Auto_Ghost then
         NETWORK.SET_REMOTE_PLAYER_AS_GHOST(player_id, NET.VARIABLE.Auto_Ghost)
     end
@@ -2521,7 +2539,7 @@ util.on_stop(function()
     NET = nil
 end)
 
-util.create_tick_handler(function()
+util.create_tick_handler(function() -- Move player stuff here instead of on_join & on_leave
     -- Menu stuff
     NET.FUNCTION.UPDATE_MENU()
     NET.FUNCTION.CHECK_FOR_2TAKE1()
