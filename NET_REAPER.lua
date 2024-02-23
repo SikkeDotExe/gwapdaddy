@@ -13,25 +13,15 @@
 ]]
 
 --[[
-Version 1.3
-[+] Added Backstab Kick
-[+] Added Stand's Love Letter Kick
-[+] Added Stand's Host Kick
-[~] Improved Give All Collectibles
-[~] Improved RP Loop
-[~] Fixed Little Kick
-[~] Fixed Big Kick
-[~] More Backend Fixes
-[-] Removed Eviction Notice from Kick All
-[-] Removed Unfair Kick from Kick All
-
-TODO
-1) Redo PlayerList
-2) Add Individual Kicks and Crashes from Stand instead of aggressive kick.
+Version 1.4
+[+] Added Airstrike Kick
+[+] Improved Wrath Kick
+[+] Improved Vanity Particles
+[-] Removed Aggressive Kick from Kick All
 ]]
 
 IN_DEV = false
-VERSION = "1.3"
+VERSION = "1.4"
 
 -- Libraries
 util.require_natives(1676318796)
@@ -187,18 +177,18 @@ NET = {
                 end
             end},
 
-            ["bring"] = {Alias = {}, Description = "Brings player(s) to you.", Rank = 1, Fire = function(whofired, target, args)
-                if target then
-                    for next = 1, #target do
-                        menu.trigger_commands("as "..players.get_name(whofired).." summon "..players.get_name(target[next]))
-                    end
-                end
-            end},
-
             ["bounty"] = {Alias = {}, Description = "", Rank = 1, Fire = function(whofired, target, args)
                 if target then
                     for next = 1, #target do
                         menu.trigger_commands("bounty"..players.get_name(target).." 10000")
+                    end
+                end
+            end},
+
+            ["bring"] = {Alias = {}, Description = "Brings player(s) to you.", Rank = 2, Fire = function(whofired, target, args)
+                if target then
+                    for next = 1, #target do
+                        menu.trigger_commands("as "..players.get_name(whofired).." summon "..players.get_name(target[next]))
                     end
                 end
             end},
@@ -217,7 +207,7 @@ NET = {
                 end
             end},
 
-            ["explode"] = {Alias = {"expl"}, Description = "Explodes a player.", Rank = 2, Fire = function(whofired, target, args)
+            ["explode"] = {Alias = {"expl", "boom", "jihad"}, Description = "Explodes a player.", Rank = 2, Fire = function(whofired, target, args)
                 if target then
                     for next = 1, #target do
                         menu.trigger_commands("explode"..players.get_name(target[next]))
@@ -424,10 +414,9 @@ NET = {
             },
             KICK = {
                 {1, "[NET] Backstab"},
-                {2, "[STAND] Aggressive"},
-                {3, "[STAND] Host"},
-                {4, "[HOST] Ban"},
-                {5, "[HOST] Blacklist"},
+                {2, "[STAND] Host"},
+                {3, "[HOST] Ban"},
+                {4, "[HOST] Blacklist"},
             },
             CRASH = {
                 {1, "[NET] Express"},
@@ -992,8 +981,7 @@ NET = {
                 NET.FUNCTION.FIRE_EVENT(-445044249, player_id, {256, 28, -1, -1})
             end,
 
-            BIG = function(player_id) -- (S0) (S1) (S3) (S4)
-                -- Missing (Kick P0) (Modded Event Q3)
+            BIG = function(player_id) -- (S0) (S1) (S3) (S4) / Partial Script Host Kick, Missing (Kick P0) (Modded Event Q3)
                 menu.trigger_commands("givesh"..players.get_name(player_id))
                 NET.FUNCTION.BLOCK_SYNCS(player_id, function() end)
                 --(S1)
@@ -1049,8 +1037,170 @@ NET = {
 
             MAILBOMB = function(player_id) -- (S5)
                 menu.trigger_commands("givesh"..players.get_name(player_id))
-                NET.FUNCTION.BLOCK_SYNCS(player_id, function() end)
                 NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {67108864, 122, 1})
+            end,
+
+            AIRSTRIKE = function(player_id)
+                --S1
+                NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {268435456, 2128065066})
+                --S0
+                NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {268435456, 1062174267, 0, 0})
+                --S3
+                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {268435456, 1229862208, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1})
+                NET.FUNCTION.FIRE_EVENT(2079562891, player_id, {268435456, 0, 2057341618})
+                NET.FUNCTION.FIRE_EVENT(1214811719, player_id, {268435456, 1, 1, 1, 1109529053})
+                NET.FUNCTION.FIRE_EVENT(1504695802, player_id, {268435456, 235638072})
+                NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {268435456, 0, 684012593})
+                --S0
+                NET.FUNCTION.FIRE_EVENT(623462469, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-2102799478, player_id, {268435456})
+                NET.FUNCTION.FIRE_EVENT(1980857009, player_id, {268435456})
+                NET.FUNCTION.FIRE_EVENT(-2051197492, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1013606569, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1852117343, player_id, {268435456})
+                NET.FUNCTION.FIRE_EVENT(-1544003568, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1101672680, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-353458099, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1713699293, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                --S4
+                NET.FUNCTION.FIRE_EVENT(1269949700, player_id, {268435456, 0, 2147483647})
+                NET.FUNCTION.FIRE_EVENT(-1547064369, player_id, {268435456, 0, 2147483647})
+                NET.FUNCTION.FIRE_EVENT(-2122488865, player_id, {268435456, 0, 2147483647})
+                NET.FUNCTION.FIRE_EVENT(-2026172248, player_id, {268435456, 0, 0, 0, 1})
+                --S2
+                NET.FUNCTION.FIRE_EVENT(-445044249, player_id, {268435456, 28, -1, -1})
+                NET.FUNCTION.FIRE_EVENT(446749111, player_id, {268435456, 215802216, 0})
+                --S3
+                NET.FUNCTION.FIRE_EVENT(-904539506, player_id, {268435456, 223139413})
+                --S0
+                NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {268435456, 1705660756, 0, 0})
+                --S3
+                NET.FUNCTION.FIRE_EVENT(630191280, player_id, {268435456, 328915838, 2022981644, 399920876, 0, 0, 1710220306, 0})
+                NET.FUNCTION.FIRE_EVENT(921195243, player_id, {268435456, 955220948, 0})
+                NET.FUNCTION.FIRE_EVENT(1925046697, player_id, {268435456, 1836776922, 1})
+                NET.FUNCTION.FIRE_EVENT(728200248, player_id, {268435456, 1917787690, 1607765286})
+                NET.FUNCTION.FIRE_EVENT(1214811719, player_id, {268435456, 1, 1, 1, 940704673})
+                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {268435456, 0, 0, 0, 833649510, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(1504695802, player_id, {268435456, 937423268})
+                NET.FUNCTION.FIRE_EVENT(-1091407522, player_id, {268435456, 1, 1735203472})
+                NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {268435456, 0, 869049141, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {268435456, 0, 340366740})
+                NET.FUNCTION.FIRE_EVENT(-642704387, player_id, {268435456, -994541138, 0, 0, 0, 0, 0, 0, 0, 841957651, 0, 0, 0})
+                --S0
+                NET.FUNCTION.FIRE_EVENT(1980857009, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1713699293, player_id, {268435456})
+                NET.FUNCTION.FIRE_EVENT(-1604421397, player_id, {268435456})
+                --S2
+                NET.FUNCTION.FIRE_EVENT(446749111, player_id, {268435456, 485910709, 0})
+                --S1
+                NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {268435456, 2128065066})
+                --S0
+                NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {268435456, 375213626, 0, 0})
+                --S3
+                NET.FUNCTION.FIRE_EVENT(-800312339, player_id, {268435456, 0, 104810707})
+                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {268435456, 1173460779, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1})
+                NET.FUNCTION.FIRE_EVENT(921195243, player_id, {268435456, 1813250283, 0})
+                NET.FUNCTION.FIRE_EVENT(1925046697, player_id, {268435456, 517205817, 1})
+                NET.FUNCTION.FIRE_EVENT(2079562891, player_id, {268435456, 0, 128935700})
+                NET.FUNCTION.FIRE_EVENT(-69240130, player_id, {268435456, 0, 0, 1692553960})
+                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {268435456, 0, 0, 0, 998776432, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(1504695802, player_id, {268435456, 753411571})
+                NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {268435456, 0, 745958345, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-642704387, player_id, {268435456, -994541138, 0, 0, 0, 0, 0, 0, 0, 1061753153, 0, 0, 0})
+                --S0
+                NET.FUNCTION.FIRE_EVENT(-2051197492, player_id, {268435456})
+                NET.FUNCTION.FIRE_EVENT(-1852117343, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1713699293, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                --S4
+                NET.FUNCTION.FIRE_EVENT(1269949700, player_id, {268435456, 0, 2147483647})
+                --S2
+                NET.FUNCTION.FIRE_EVENT(-445044249, player_id, {268435456, 28, -1, -1})
+                --S3
+                NET.FUNCTION.FIRE_EVENT(-800312339, player_id, {268435456, 0, 797935737})
+                NET.FUNCTION.FIRE_EVENT(630191280, player_id, {268435456, 1853073811, 576308009, 1416651674, 0, 0, 1335345922, 0})
+                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {268435456, 635702722, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1})
+                NET.FUNCTION.FIRE_EVENT(-69240130, player_id, {268435456, 0, 0, 1807427078})
+                NET.FUNCTION.FIRE_EVENT(1214811719, player_id, {268435456, 1, 1, 1, 458921163})
+                NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {268435456, 0, 577623592, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {268435456, 0, 797647480})
+                --S0
+                NET.FUNCTION.FIRE_EVENT(623462469, player_id, {268435456})
+                NET.FUNCTION.FIRE_EVENT(-2102799478, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(1980857009, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1013606569, player_id, {268435456})
+                NET.FUNCTION.FIRE_EVENT(-1544003568, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-353458099, player_id, {268435456})
+                NET.FUNCTION.FIRE_EVENT(-1604421397, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                --MS3
+                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                --S4
+                NET.FUNCTION.FIRE_EVENT(-1547064369, player_id, {268435456, 0, 2147483647})
+                NET.FUNCTION.FIRE_EVENT(-2122488865, player_id, {268435456, 0, 2147483647})
+                NET.FUNCTION.FIRE_EVENT(-2026172248, player_id, {268435456, 0, 0, 0, 1})
+                --S1
+                NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {268435456, 2128065066})
+                --S3
+                NET.FUNCTION.FIRE_EVENT(630191280, player_id, {268435456, 1269567919, 117455618, 2112734064, 0, 0, 2038512487, 0})
+                NET.FUNCTION.FIRE_EVENT(921195243, player_id, {268435456, 280501093, 0})
+                NET.FUNCTION.FIRE_EVENT(728200248, player_id, {268435456, 1194964156, 357230186})
+                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {268435456, 0, 0, 0, 134219114, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1091407522, player_id, {268435456, 1, 808555509})
+                NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {268435456, 0, 619225562, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {268435456, 0, 490765514})
+                --S0
+                NET.FUNCTION.FIRE_EVENT(1980857009, player_id, {268435456})
+                NET.FUNCTION.FIRE_EVENT(-2051197492, player_id, {268435456})
+                NET.FUNCTION.FIRE_EVENT(-1713699293, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                --S2
+                NET.FUNCTION.FIRE_EVENT(-445044249, player_id, {268435456, 28, -1, -1})
+                --MS8
+                NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {268435456, 78335916, 0, 0})
+                --S3
+                NET.FUNCTION.FIRE_EVENT(-800312339, player_id, {268435456, 0, 1066529362})
+                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {268435456, 1826118122, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1})
+                NET.FUNCTION.FIRE_EVENT(1925046697, player_id, {268435456, 1974290499, 1})
+                NET.FUNCTION.FIRE_EVENT(1214811719, player_id, {268435456, 1, 1, 1, 411497286})
+                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {268435456, 0, 0, 0, 1809210831, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1091407522, player_id, {268435456, 1, 513813295})
+                NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {268435456, 0, 748216566, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {268435456, 0, 1579964530})
+                NET.FUNCTION.FIRE_EVENT(-642704387, player_id, {268435456, -994541138, 0, 0, 0, 0, 0, 0, 0, 2082664489, 0, 0, 0})
+                --S0
+                NET.FUNCTION.FIRE_EVENT(-1852117343, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-353458099, player_id, {268435456})
+                --MS3
+                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {268435456})
+                --S1
+                NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {268435456, 2128065066})
+                NET.FUNCTION.FIRE_EVENT(630191280, player_id, {268435456, 1269567919, 117455618, 2112734064, 0, 0, 2038512487, 0})
+                NET.FUNCTION.FIRE_EVENT(921195243, player_id, {268435456, 280501093, 0})
+                NET.FUNCTION.FIRE_EVENT(728200248, player_id, {268435456, 1194964156, 357230186})
+                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {268435456, 0, 0, 0, 134219114, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1091407522, player_id, {268435456, 1, 808555509})
+                NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {268435456, 0, 619225562, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {268435456, 0, 490765514})
+                --S0
+                NET.FUNCTION.FIRE_EVENT(1980857009, player_id, {268435456})
+                NET.FUNCTION.FIRE_EVENT(-2051197492, player_id, {268435456})
+                NET.FUNCTION.FIRE_EVENT(-1713699293, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-445044249, player_id, {268435456, 28, -1, -1})
+                --MS8
+                NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {268435456, 78335916, 0, 0})
+                --S3
+                NET.FUNCTION.FIRE_EVENT(-800312339, player_id, {268435456, 0, 1066529362})
+                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {268435456, 1826118122, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1})
+                NET.FUNCTION.FIRE_EVENT(1925046697, player_id, {268435456, 1974290499, 1})
+                NET.FUNCTION.FIRE_EVENT(1214811719, player_id, {268435456, 1, 1, 1, 411497286})
+                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {268435456, 0, 0, 0, 1809210831, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1091407522, player_id, {268435456, 1, 513813295})
+                NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {268435456, 0, 748216566, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {268435456, 0, 1579964530})
+                NET.FUNCTION.FIRE_EVENT(-642704387, player_id, {268435456, -994541138, 0, 0, 0, 0, 0, 0, 0, 2082664489, 0, 0, 0})
+                --S0
+                NET.FUNCTION.FIRE_EVENT(-1852117343, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-353458099, player_id, {268435456})
+                --MS3
+                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {268435456})
             end,
 
             AGGRESSIVE = function(player_id)
@@ -1076,10 +1226,12 @@ NET = {
                 elseif TargetName ~= HostName then -- If the player isn't host
                     -- If we're next in line to get host
                     if players.get_host_queue_position(players.user()) == 1 and not NET.FUNCTION.IS_PLAYER_A_THREAT(players.get_host()) then
-                        NET.FUNCTION.CRASH_PLAYER(players.get_host())
-                        NET.FUNCTION.KICK_PLAYER(players.get_host())
-        
-                        util.yield(35000) -- We util.yield and assume that this is enough time for the host to be gone
+                        local Host = players.get_host()
+                        NET.FUNCTION.CRASH_PLAYER(Host)
+                        NET.FUNCTION.KICK_PLAYER(Host)
+
+                        -- Perfect behavior expected.
+                        repeat util.yield(1000) until not players.exists(Host) or not NET.FUNCTION.IS_NET_PLAYER_OK(players.user()) or not NET.FUNCTION.IS_NET_PLAYER_OK(player_id)
         
                         if players.get_host() == players.user() and players.exists(player_id) then
                             menu.trigger_commands("ban"..TargetName)
@@ -1300,7 +1452,6 @@ NET = {
 
             WARHEAD = function(player_id) -- (N4)
                 local TargetName = players.get_name(player_id)
-                NET.FUNCTION.CRASH_PLAYER(player_id)
                 menu.trigger_commands("footlettuce"..TargetName)
                 if players.get_vehicle_model(player_id) then
                     menu.trigger_commands("slaughter"..TargetName)
@@ -1322,23 +1473,17 @@ NET = {
             end,
 
             EXPRESS = function(player_id) -- (S3) (STAND'S ELEGANT CRASH)
-                local int_min = -2147483647
-                local int_max = 2147483647
-                for next = 1, 30 do
-                    --NET.FUNCTION.FIRE_EVENT(-375628860, player_id, {1, -2147483645})
-                    NET.FUNCTION.FIRE_EVENT(-375628860, player_id, {1, math.random(int_min, int_max)})
+                for next = 1, 15 do
+                    NET.FUNCTION.FIRE_EVENT(-375628860, player_id, {1, math.random(-2147483647, 2147483647)})
                 end
             end,
 
             DYNAMITE = function(player_id) -- (S2)
                 menu.trigger_commands("givesh"..players.get_name(player_id))
-
-                for next = 1, 15 do
-                    NET.FUNCTION.FIRE_EVENT(2067191610, player_id, {0, 0, -12988, -99097, 0})
-                    NET.FUNCTION.FIRE_EVENT(323285304, player_id, {0, 0, -12988, -99097, 0})
-                    NET.FUNCTION.FIRE_EVENT(495813132, player_id, {0, 0, -12988, -99097, 0})
-                    NET.FUNCTION.FIRE_EVENT(323285304, player_id, {323285304, 64,2139114019,14299,40016,11434,4595,25992})
-                end
+                NET.FUNCTION.FIRE_EVENT(2067191610, player_id, {0, 0, -12988, -99097, 0})
+                NET.FUNCTION.FIRE_EVENT(323285304, player_id, {0, 0, -12988, -99097, 0})
+                NET.FUNCTION.FIRE_EVENT(495813132, player_id, {0, 0, -12988, -99097, 0})
+                NET.FUNCTION.FIRE_EVENT(323285304, player_id, {323285304, 64, 2139114019, 14299, 40016, 11434, 4595, 25992})
             end,
 
             CHICKEN = function(player_id) -- (X9)
@@ -1892,13 +2037,11 @@ NET = {
                     local PlayerName = players.get_name(ToKick[next])
                     if NET.VARIABLE.Kick_Method == 1 then -- Backstab / (S0)
                         NET.COMMAND.KICK.BACKSTAB(ToKick[next])
-                    elseif NET.VARIABLE.Kick_Method == 2 then -- Aggressive / Love Letter + Host + Non-Host
-                        NET.COMMAND.KICK.AGGRESSIVE(ToKick[next])
-                    elseif NET.VARIABLE.Kick_Method == 3 then -- Host Kick / Votekick
+                    elseif NET.VARIABLE.Kick_Method == 2 then -- Host Kick / Votekick
                         menu.trigger_commands("hostkick"..PlayerName)
-                    elseif NET.VARIABLE.Kick_Method == 4 then -- Ban / "Player has been removed for cheating"
+                    elseif NET.VARIABLE.Kick_Method == 3 then -- Ban / "Player has been removed for cheating"
                         menu.trigger_commands("ban"..PlayerName)
-                    elseif NET.VARIABLE.Kick_Method == 5 then -- Desync Kick
+                    elseif NET.VARIABLE.Kick_Method == 4 then -- Desync Kick
                         menu.trigger_commands("blacklist"..PlayerName)
                     end
                 end
@@ -2279,10 +2422,10 @@ NET = {
             end
         end,
 
-        VANITY_PARTICLES = function(player_id)
-            local PTFX = {"scr_sum2_hal_hunted_respawn", "scr_sum2_hal_rider_weak_blue", "scr_sum2_hal_rider_weak_green", "scr_sum2_hal_rider_weak_orange", "scr_sum2_hal_rider_weak_greyblack"}
+        VANITY_PARTICLES = function(player_id, index)
+            local PTFX = {"hacklol", "scr_sum2_hal_hunted_respawn", "scr_sum2_hal_rider_weak_blue", "scr_sum2_hal_rider_weak_green", "scr_sum2_hal_rider_weak_orange", "scr_sum2_hal_rider_weak_greyblack"}
             local player_pos = players.get_position(player_id)
-            local ptfx = PTFX[math.random(1, #PTFX)]
+            local ptfx = ((index == nil or index == 1) and PTFX[math.random(1, #PTFX)]) or PTFX[index]
             STREAMING.REQUEST_NAMED_PTFX_ASSET("scr_sum2_hal")
             GRAPHICS.USE_PARTICLE_FX_ASSET("scr_sum2_hal")
             GRAPHICS.START_NETWORKED_PARTICLE_FX_NON_LOOPED_AT_COORD(ptfx, player_pos.x, player_pos.y, player_pos.z, 0, 0, 0, 2.5, false, false, false)
@@ -2329,8 +2472,9 @@ NET = {
         menu.action(KICK_OPTIONS, "[STAND] Aggressive Kick", {"akick"}, "Unblockable if target isn't host & detected as a threat.", function() NET.COMMAND.KICK.AGGRESSIVE(player_id) end)
         menu.action(KICK_OPTIONS, "[STAND] Love Letter Kick", {}, "Discrete and unblockable.\nCannot be used against host.\nUnblockable when you are host.", function() menu.trigger_commands("loveletterkick"..players.get_name(player_id)) end)
         menu.action(KICK_OPTIONS, "[STAND] Host Kick", {}, "Very effective against modders with protections.\nUnblockable when you are host.", function() menu.trigger_commands("hostkick"..players.get_name(player_id)) end)
-        menu.action(KICK_OPTIONS, "[NET] Big Kick", {"bigkick"}, "Effective against modders with protections.", function() NET.COMMAND.KICK.BIG(player_id) end)
-        menu.action(KICK_OPTIONS, "[NET] Little Kick", {"litkick"}, "Effective against modders with protections.", function() NET.COMMAND.KICK.LITTLE(player_id) end)
+        menu.action(KICK_OPTIONS, "[NET] Airstrike Kick", {"airkick"}, "Blocked by propular menus.", function() NET.COMMAND.KICK.BIG(player_id) end)
+        menu.action(KICK_OPTIONS, "[NET] Big Kick", {"bigkick"}, "Blocked by propular menus.", function() NET.COMMAND.KICK.BIG(player_id) end)
+        menu.action(KICK_OPTIONS, "[NET] Little Kick", {"litkick"}, "Blocked by propular menus.", function() NET.COMMAND.KICK.LITTLE(player_id) end)
         menu.action(KICK_OPTIONS, "[NET] Mailbomb Kick", {"mbkick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.MAILBOMB(player_id) end)
         menu.action(KICK_OPTIONS, "[NET] Backstab Kick", {"stabkick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.BACKSTAB(player_id) end)
         menu.action(KICK_OPTIONS, "[NET] NET Kick", {"netkick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.NET(player_id) end)
@@ -2419,7 +2563,9 @@ NET = {
 -- Main Options
 local Title = menu.divider(menu.my_root(), "NET.REAPER")
 local SELF_LIST = menu.list(menu.my_root(), "Self")
-menu.toggle_loop(SELF_LIST, "Vanity Particles", {}, "", function(Enabled) NET.COMMAND.VANITY_PARTICLES(players.user()) end)
+local VANITY_LIST = menu.list(SELF_LIST, "Vanity Particles")
+menu.list_select(VANITY_LIST, "Particles", {}, "", {"Rainbow", "Brown", "Blue", "Green", "Orange", "Greyblack"}, 1, function(Value) vanity = Value end)
+menu.toggle_loop(VANITY_LIST, "Enable", {}, "", function(Enabled) NET.COMMAND.VANITY_PARTICLES(players.user(), vanity) end)
 local PROFILES_LIST = menu.list(SELF_LIST, "Profiles")
 menu.list_select(PROFILES_LIST, "Profiles", {}, "", NET.TABLE.PROFILE, 1, function(Value) NET.VARIABLE.Current_Profile = NET.TABLE.PROFILE[Value] end)
 menu.toggle(PROFILES_LIST, "Mute Notifications", {}, "", NET.COMMAND.MUTE_STAND_REACTION_NOTIFICATIONS)
@@ -2550,3 +2696,57 @@ util.create_tick_handler(function() -- Move player stuff here instead of on_join
 end) 
 
 util.keep_running()
+
+-- Stuff im working on below.
+
+	-- Train models HAVE TO be loaded (requested) before you use this.
+	-- freight,freightcar,freightgrain,freightcont1,freightcont2,freighttrailer
+	--["CREATE_MISSION_TRAIN"]=--[[Vehicle (int)]] function(--[[int]] variation,--[[float]] x,--[[float]] y,--[[float]] z,--[[BOOL (bool)]] direction,--[[Any (int)]] p5,--[[Any (int)]] p6)
+
+    --["SET_VEHICLE_FORCE_AFTERBURNER"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] toggle)
+
+    --["SET_DISABLE_BMX_EXTRA_TRICK_FORCES"]=--[[void]] function(--[[Any (int)]] p0)
+
+    --["SET_BIKE_EASY_TO_LAND"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] toggle)
+
+    --["SET_SCRIPT_ROCKET_BOOST_RECHARGE_TIME"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[float]] seconds)
+    --["GET_HAS_ROCKET_BOOST"]=--[[BOOL (bool)]] function(--[[Vehicle (int)]] vehicle)
+    --["IS_ROCKET_BOOST_ACTIVE"]=--[[BOOL (bool)]] function(--[[Vehicle (int)]] vehicle)
+    --["SET_ROCKET_BOOST_ACTIVE"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] active)
+    --["SET_ROCKET_BOOST_FILL"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[float]] percentage)
+
+    --entities.get_all_vehicles_as_pointers()
+    --["GET_ALL_VEHICLES"]=--[[int]] function(--[[Any* (pointer)]] vehsStruct)
+
+    --["SET_DRIFT_TYRES"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] toggle)
+
+    --["SET_VEHICLE_ALLOW_HOMING_MISSLE_LOCKON_SYNCED"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] canBeLockedOn,--[[BOOL (bool)]] p2)
+
+    --["SET_GOON_BOSS_VEHICLE"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] toggle)
+
+    -- http://www.calculateme.com/Speed/MetersperSecond/ToMilesperHour.htm
+	--["SET_VEHICLE_FORWARD_SPEED"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[float]] speed)
+
+    	-- windowIndex:
+	-- 0 = Front Left Window
+	-- 1 = Front Right Window
+	-- 2 = Rear Left Window
+	-- 3 = Rear Right Window
+	-- 4 = Front Windscreen
+	-- 5 = Rear Windscreen
+	-- 6 = Mid Left
+	-- 7 = Mid Right
+	-- 8 = Invalid
+    --["ROLL_DOWN_WINDOW"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[int]] windowIndex)
+    --["ROLL_UP_WINDOW"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[int]] windowIndex)
+
+    --["SET_VEHICLE_ALARM"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] state)
+    --["START_VEHICLE_ALARM"]=--[[void]] function(--[[Vehicle (int)]] vehicle)
+
+    --["SET_VEHICLE_LIGHT_MULTIPLIER"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[float]] multiplier)
+
+    --["SET_TRAIN_SPEED"]=--[[void]] function(--[[Vehicle (int)]] train,--[[float]] speed)
+    --["SET_TRAIN_CRUISE_SPEED"]=--[[void]] function(--[[Vehicle (int)]] train,--[[float]] speed)
+
+    --["SET_VEHICLE_WILL_FORCE_OTHER_VEHICLES_TO_STOP"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] toggle)
+    --["SET_VEHICLE_ACT_AS_IF_HAS_SIREN_ON"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] p1)
