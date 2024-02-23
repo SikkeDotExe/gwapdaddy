@@ -18,6 +18,7 @@ Version 1.4
 [+] Improved Wrath Kick
 [+] Improved Vanity Particles
 [-] Removed Aggressive Kick from Kick All
+[-] Removed Net Kick
 [-] Removed Unfair Kick
 [-] Removed Mailbomb Kick
 ]]
@@ -2450,9 +2451,7 @@ NET = {
         menu.action(KICK_OPTIONS, "[NET] Airstrike Kick", {"airkick"}, "Blocked by propular menus.", function() NET.COMMAND.KICK.BIG(player_id) end)
         menu.action(KICK_OPTIONS, "[NET] Big Kick", {"bigkick"}, "Blocked by propular menus.", function() NET.COMMAND.KICK.BIG(player_id) end)
         menu.action(KICK_OPTIONS, "[NET] Little Kick", {"litkick"}, "Blocked by propular menus.", function() NET.COMMAND.KICK.LITTLE(player_id) end)
-        menu.action(KICK_OPTIONS, "[NET] Mailbomb Kick", {"mbkick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.MAILBOMB(player_id) end)
         menu.action(KICK_OPTIONS, "[NET] Backstab Kick", {"stabkick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.BACKSTAB(player_id) end)
-        menu.action(KICK_OPTIONS, "[NET] NET Kick", {"netkick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.NET(player_id) end)
         menu.action(KICK_OPTIONS, "[ADDICT] Eviction Notice", {"ekick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.EVICTION_NOTICE(player_id) end)
         menu.action(KICK_OPTIONS, "[STAND] Legit Kick", {"lkick"}, "Don't use against modders.", function() NET.COMMAND.KICK.LEGIT(player_id) end)
         local CRASH_OPTIONS = menu.list(MODERATE_LIST, "Crashes")
