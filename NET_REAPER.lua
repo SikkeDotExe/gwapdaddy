@@ -18,6 +18,8 @@ Version 1.4
 [+] Improved Wrath Kick
 [+] Improved Vanity Particles
 [-] Removed Aggressive Kick from Kick All
+[-] Removed Unfair Kick
+[-] Removed Mailbomb Kick
 ]]
 
 IN_DEV = false
@@ -905,33 +907,9 @@ NET = {
                 menu.trigger_commands("aids"..TargetName)
             end,
 
-            BACKSTAB = function(player_id)
+            BACKSTAB = function(player_id) -- Net exclusive
                 for next = 1, 15 do
                     NET.FUNCTION.FIRE_EVENT(968269233, player_id, {players.user(), 4, math.random(25, 100), 1, 1, 1})
-                end
-            end,
-
-            NET = function(player_id) -- (S3)
-                menu.trigger_commands("givesh" .. players.get_name(player_id))
-                NET.FUNCTION.FIRE_EVENT(921195243, player_id, {64,20,0})
-                NET.FUNCTION.FIRE_EVENT(1925046697, player_id, {64,20,1})
-                NET.FUNCTION.FIRE_EVENT(728200248, player_id, {64,7,0,0})
-                NET.FUNCTION.FIRE_EVENT(-800312339, player_id, {64,0,26})
-                NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {64,0,26})
-            end,
-
-            UNFAIR = function(player_id) -- (S3)
-                local int_min = -2147483647
-                local int_max = 2147483647
-                for i = 1, 15 do
-                    NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {12, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max), player_id, math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max)})
-                    NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {12, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                end
-                menu.trigger_commands("givesh" .. players.get_name(player_id))
-                util.yield()
-                for i = 1, 15 do
-                    NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {12, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, player_id, math.random(int_min, int_max)})
-                    NET.FUNCTION.FIRE_EVENT(1017995959, player_id, {27, 0})
                 end
             end,
 
@@ -1033,11 +1011,6 @@ NET = {
                 NET.FUNCTION.FIRE_EVENT(-1547064369, player_id, {4, 0, 2147483647})
                 NET.FUNCTION.FIRE_EVENT(-2122488865, player_id, {4, 0, 2147483647})
                 NET.FUNCTION.FIRE_EVENT(-2026172248, player_id, {4, 0, 0, 0, 1})
-            end,
-
-            MAILBOMB = function(player_id) -- (S5)
-                menu.trigger_commands("givesh"..players.get_name(player_id))
-                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {67108864, 122, 1})
             end,
 
             AIRSTRIKE = function(player_id)
@@ -1201,6 +1174,8 @@ NET = {
                 NET.FUNCTION.FIRE_EVENT(-353458099, player_id, {268435456})
                 --MS3
                 NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {268435456})
+                -- Was used in unfair, S3??
+                NET.FUNCTION.FIRE_EVENT(1017995959, player_id, {27, 0})
             end,
 
             AGGRESSIVE = function(player_id)
@@ -2479,7 +2454,6 @@ NET = {
         menu.action(KICK_OPTIONS, "[NET] Backstab Kick", {"stabkick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.BACKSTAB(player_id) end)
         menu.action(KICK_OPTIONS, "[NET] NET Kick", {"netkick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.NET(player_id) end)
         menu.action(KICK_OPTIONS, "[ADDICT] Eviction Notice", {"ekick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.EVICTION_NOTICE(player_id) end)
-        menu.action(KICK_OPTIONS, "[ADDICT] Unfair Kick", {"sekick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.UNFAIR(player_id) end)
         menu.action(KICK_OPTIONS, "[STAND] Legit Kick", {"lkick"}, "Don't use against modders.", function() NET.COMMAND.KICK.LEGIT(player_id) end)
         local CRASH_OPTIONS = menu.list(MODERATE_LIST, "Crashes")
         menu.action(CRASH_OPTIONS, "[STAND] 2Take1 Crash", {"2t1crash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH["2TAKE1"](player_id) end)
