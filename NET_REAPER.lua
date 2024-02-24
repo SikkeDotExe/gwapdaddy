@@ -13,18 +13,17 @@
 ]]
 
 --[[
-Version 1.4
-[+] Added Airstrike Kick
-[+] Improved Wrath Kick
-[+] Improved Vanity Particles
-[-] Removed Aggressive Kick from Kick All
-[-] Removed Net Kick
-[-] Removed Unfair Kick
-[-] Removed Mailbomb Kick
+Version 1.4a
+[+] Improved Airstrike Kick
+[+] Added Pool's Closed Kick
+[~] Fixed Airstrike Kick
+[-] Removed Big Kick
+[-] Removed Little Kick
+[-] Removed Legit Kick
 ]]
 
 IN_DEV = false
-VERSION = "1.4"
+VERSION = "1.4a"
 
 -- Libraries
 util.require_natives(1676318796)
@@ -901,25 +900,12 @@ NET = {
     COMMAND = {
 
         KICK = {
-            LEGIT = function(player_id)
-                local TargetName = players.get_name(player_id)
-                menu.trigger_commands("pickupkick"..TargetName)
-                menu.trigger_commands("orgasmkick"..TargetName)
-                menu.trigger_commands("aids"..TargetName)
-            end,
-
-            BACKSTAB = function(player_id) -- Net exclusive
-                for next = 1, 15 do
-                    NET.FUNCTION.FIRE_EVENT(968269233, player_id, {players.user(), 4, math.random(25, 100), 1, 1, 1})
-                end
-            end,
-
             EVICTION_NOTICE = function(player_id)
                 local int_min = -2147483647
                 local int_max = 2147483647
                 for i = 1, 15 do
                     NET.FUNCTION.FIRE_EVENT(1613825825, player_id, {20, 1, -1, -1, -1, -1, math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max), player_id, math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max)})
-                    NET.FUNCTION.FIRE_EVENT(1613825825, player_id, {20, 1, -1, -1, -1, -1})
+                    NET.FUNCTION.FIRE_EVENT(1613825825, player_id, {20, 1, -1, -1, -1, -1}) -- Unique
                 end
                 menu.trigger_commands("givesh" .. players.get_name(player_id))
                 util.yield()
@@ -929,103 +915,16 @@ NET = {
                 end
             end,
 
-            LITTLE = function(player_id) -- (S0) (S1) (S2) (S3) (S4) / Stand's Non-Host Kick
-                menu.trigger_commands("givesh"..players.get_name(player_id))
-                -- S1
-                NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {256, 654906418})
-                -- S0
-                NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {256, 2037938629, 0, 0})
-                -- S3
-                NET.FUNCTION.FIRE_EVENT(630191280, player_id, {256, 2077719420, 1624671, 861028290, 0, 0, 15582880, 0})
-                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {256, 400924026, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, -1})
-                NET.FUNCTION.FIRE_EVENT(2079562891, player_id, {256, 0, 1113755217})
-                NET.FUNCTION.FIRE_EVENT(1214811719, player_id, {256, 1, 1, 1, 1755964883})
-                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {256, 0, 0, 0, 937361495, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(1504695802, player_id, {256, 2144444366})
-                NET.FUNCTION.FIRE_EVENT(-1091407522, player_id, {256, 1, 926425076})
-                NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {256, 0, 1807042285, 0, 0})
-               -- S0
-                NET.FUNCTION.FIRE_EVENT(623462469, player_id, {256})
-                NET.FUNCTION.FIRE_EVENT(-2102799478, player_id, {256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-2051197492, player_id, {256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-1101672680, player_id, {256})
-                NET.FUNCTION.FIRE_EVENT(-1713699293, player_id, {256})
-                NET.FUNCTION.FIRE_EVENT(-1604421397, player_id, {256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                -- S4
-                NET.FUNCTION.FIRE_EVENT(1269949700, player_id, {256, 0, 2147483647})
-                NET.FUNCTION.FIRE_EVENT(-1547064369, player_id, {256, 0, 2147483647})
-                NET.FUNCTION.FIRE_EVENT(-2122488865, player_id, {256, 0, 2147483647})
-                NET.FUNCTION.FIRE_EVENT(-2026172248, player_id, {256, 0, 0, 0, 1})
-                -- S2
-                NET.FUNCTION.FIRE_EVENT(-445044249, player_id, {256, 28, -1, -1})
+            BACKSTAB = function(player_id) -- Net exclusive / S0
+                for next = 1, 15 do
+                    NET.FUNCTION.FIRE_EVENT(968269233, player_id, {players.user(), 4, math.random(25, 100), 1, 1, 1}) -- Unique
+                end
             end,
 
-            BIG = function(player_id) -- (S0) (S1) (S3) (S4) / Partial Script Host Kick, Missing (Kick P0) (Modded Event Q3)
+            AIRSTRIKE = function(player_id) -- (S0) (S1) (S2) (S3) (S4) (S5)
                 menu.trigger_commands("givesh"..players.get_name(player_id))
-                NET.FUNCTION.BLOCK_SYNCS(player_id, function() end)
-                --(S1)
-                NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {4, 186774466})
-                --(S3)
-                NET.FUNCTION.FIRE_EVENT(904539506, player_id, {4, 180220781})
-                --(S0)
-                NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {4, 1870799819, 0, 0})
-                --(S3)
-                NET.FUNCTION.FIRE_EVENT(-800312339, player_id, {4, 0, 1281769980})
-                NET.FUNCTION.FIRE_EVENT(630191280, player_id, {4, 26449345, 284885813, 242240238, 0, 0, 1961060661, 0})
-                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {4, 528467425, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1})
-                NET.FUNCTION.FIRE_EVENT(921195243, player_id, {4, 1040047737, 0})
-                NET.FUNCTION.FIRE_EVENT(728200248, player_id, {4, 1522943058, 341846771})
-                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {4, 0, 0, 0, 2029817797, 0, 0})
-                --(S0)
-                NET.FUNCTION.FIRE_EVENT(623462469, player_id, {4})
-                NET.FUNCTION.FIRE_EVENT(-2102799478, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(1980857009, player_id, {4})
-                NET.FUNCTION.FIRE_EVENT(-2051197492, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                --(S3)
-                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {4, 528467425, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1})
-                NET.FUNCTION.FIRE_EVENT(921195243, player_id, {4, 1040047737, 0})
-                NET.FUNCTION.FIRE_EVENT(728200248, player_id, {4, 1522943058, 341846771})
-                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {4, 0, 0, 0, 2029817797, 0, 0})
-                --(S0)
-                NET.FUNCTION.FIRE_EVENT(623462469, player_id, {4})
-                NET.FUNCTION.FIRE_EVENT(-2102799478, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(1980857009, player_id, {4})
-                NET.FUNCTION.FIRE_EVENT(-2051197492, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-1013606569, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-1101672680, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-353458099, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                --(MS3)
-                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {4})
-                --(S4)
-                NET.FUNCTION.FIRE_EVENT(1269949700, player_id, {4, 0, 2147483647})
-                NET.FUNCTION.FIRE_EVENT(-1547064369, player_id, {4, 0, 2147483647})
-                NET.FUNCTION.FIRE_EVENT(-2122488865, player_id, {4, 0, 2147483647})
-                NET.FUNCTION.FIRE_EVENT(-2026172248, player_id, {4, 0, 0, 0, 1})
-                --(S0)
-                NET.FUNCTION.FIRE_EVENT(-1013606569, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-1101672680, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-353458099, player_id, {4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                --(MS3)
-                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {4})
-                --(S4)
-                NET.FUNCTION.FIRE_EVENT(1269949700, player_id, {4, 0, 2147483647})
-                NET.FUNCTION.FIRE_EVENT(-1547064369, player_id, {4, 0, 2147483647})
-                NET.FUNCTION.FIRE_EVENT(-2122488865, player_id, {4, 0, 2147483647})
-                NET.FUNCTION.FIRE_EVENT(-2026172248, player_id, {4, 0, 0, 0, 1})
-            end,
-
-            AIRSTRIKE = function(player_id)
-                --S1
-                NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {268435456, 2128065066})
                 --S0
                 NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {268435456, 1062174267, 0, 0})
-                --S3
-                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {268435456, 1229862208, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1})
-                NET.FUNCTION.FIRE_EVENT(2079562891, player_id, {268435456, 0, 2057341618})
-                NET.FUNCTION.FIRE_EVENT(1214811719, player_id, {268435456, 1, 1, 1, 1109529053})
-                NET.FUNCTION.FIRE_EVENT(1504695802, player_id, {268435456, 235638072})
-                NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {268435456, 0, 684012593})
-                --S0
                 NET.FUNCTION.FIRE_EVENT(623462469, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
                 NET.FUNCTION.FIRE_EVENT(-2102799478, player_id, {268435456})
                 NET.FUNCTION.FIRE_EVENT(1980857009, player_id, {268435456})
@@ -1036,19 +935,41 @@ NET = {
                 NET.FUNCTION.FIRE_EVENT(-1101672680, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
                 NET.FUNCTION.FIRE_EVENT(-353458099, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
                 NET.FUNCTION.FIRE_EVENT(-1713699293, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                --S4
-                NET.FUNCTION.FIRE_EVENT(1269949700, player_id, {268435456, 0, 2147483647})
-                NET.FUNCTION.FIRE_EVENT(-1547064369, player_id, {268435456, 0, 2147483647})
-                NET.FUNCTION.FIRE_EVENT(-2122488865, player_id, {268435456, 0, 2147483647})
-                NET.FUNCTION.FIRE_EVENT(-2026172248, player_id, {268435456, 0, 0, 0, 1})
+                NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {268435456, 1705660756, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(623462469, player_id, {268435456})
+                NET.FUNCTION.FIRE_EVENT(-2102799478, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1013606569, player_id, {268435456})
+                NET.FUNCTION.FIRE_EVENT(-353458099, player_id, {268435456})
+                NET.FUNCTION.FIRE_EVENT(-1604421397, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-2051197492, player_id, {268435456})
+                NET.FUNCTION.FIRE_EVENT(-1852117343, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {268435456, 375213626, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(1980857009, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1713699293, player_id, {268435456})
+                NET.FUNCTION.FIRE_EVENT(-1604421397, player_id, {268435456})
+                --S1
+                NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {268435456, 2128065066})
                 --S2
                 NET.FUNCTION.FIRE_EVENT(-445044249, player_id, {268435456, 28, -1, -1})
                 NET.FUNCTION.FIRE_EVENT(446749111, player_id, {268435456, 215802216, 0})
+                NET.FUNCTION.FIRE_EVENT(446749111, player_id, {268435456, 485910709, 0})
                 --S3
+                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {268435456, 1229862208, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1})
+                NET.FUNCTION.FIRE_EVENT(2079562891, player_id, {268435456, 0, 2057341618})
+                NET.FUNCTION.FIRE_EVENT(1214811719, player_id, {268435456, 1, 1, 1, 1109529053})
+                NET.FUNCTION.FIRE_EVENT(1504695802, player_id, {268435456, 235638072})
+                NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {268435456, 0, 684012593})
+                NET.FUNCTION.FIRE_EVENT(-800312339, player_id, {268435456, 0, 104810707})
+                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {268435456, 1173460779, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1})
+                NET.FUNCTION.FIRE_EVENT(921195243, player_id, {268435456, 1813250283, 0})
+                NET.FUNCTION.FIRE_EVENT(1925046697, player_id, {268435456, 517205817, 1})
+                NET.FUNCTION.FIRE_EVENT(2079562891, player_id, {268435456, 0, 128935700})
+                NET.FUNCTION.FIRE_EVENT(-69240130, player_id, {268435456, 0, 0, 1692553960})
+                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {268435456, 0, 0, 0, 998776432, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(1504695802, player_id, {268435456, 753411571})
+                NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {268435456, 0, 745958345, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-642704387, player_id, {268435456, -994541138, 0, 0, 0, 0, 0, 0, 0, 1061753153, 0, 0, 0})
                 NET.FUNCTION.FIRE_EVENT(-904539506, player_id, {268435456, 223139413})
-                --S0
-                NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {268435456, 1705660756, 0, 0})
-                --S3
                 NET.FUNCTION.FIRE_EVENT(630191280, player_id, {268435456, 328915838, 2022981644, 399920876, 0, 0, 1710220306, 0})
                 NET.FUNCTION.FIRE_EVENT(921195243, player_id, {268435456, 955220948, 0})
                 NET.FUNCTION.FIRE_EVENT(1925046697, player_id, {268435456, 1836776922, 1})
@@ -1060,36 +981,6 @@ NET = {
                 NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {268435456, 0, 869049141, 0, 0})
                 NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {268435456, 0, 340366740})
                 NET.FUNCTION.FIRE_EVENT(-642704387, player_id, {268435456, -994541138, 0, 0, 0, 0, 0, 0, 0, 841957651, 0, 0, 0})
-                --S0
-                NET.FUNCTION.FIRE_EVENT(1980857009, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-1713699293, player_id, {268435456})
-                NET.FUNCTION.FIRE_EVENT(-1604421397, player_id, {268435456})
-                --S2
-                NET.FUNCTION.FIRE_EVENT(446749111, player_id, {268435456, 485910709, 0})
-                --S1
-                NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {268435456, 2128065066})
-                --S0
-                NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {268435456, 375213626, 0, 0})
-                --S3
-                NET.FUNCTION.FIRE_EVENT(-800312339, player_id, {268435456, 0, 104810707})
-                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {268435456, 1173460779, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1})
-                NET.FUNCTION.FIRE_EVENT(921195243, player_id, {268435456, 1813250283, 0})
-                NET.FUNCTION.FIRE_EVENT(1925046697, player_id, {268435456, 517205817, 1})
-                NET.FUNCTION.FIRE_EVENT(2079562891, player_id, {268435456, 0, 128935700})
-                NET.FUNCTION.FIRE_EVENT(-69240130, player_id, {268435456, 0, 0, 1692553960})
-                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {268435456, 0, 0, 0, 998776432, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(1504695802, player_id, {268435456, 753411571})
-                NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {268435456, 0, 745958345, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-642704387, player_id, {268435456, -994541138, 0, 0, 0, 0, 0, 0, 0, 1061753153, 0, 0, 0})
-                --S0
-                NET.FUNCTION.FIRE_EVENT(-2051197492, player_id, {268435456})
-                NET.FUNCTION.FIRE_EVENT(-1852117343, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-1713699293, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                --S4
-                NET.FUNCTION.FIRE_EVENT(1269949700, player_id, {268435456, 0, 2147483647})
-                --S2
-                NET.FUNCTION.FIRE_EVENT(-445044249, player_id, {268435456, 28, -1, -1})
-                --S3
                 NET.FUNCTION.FIRE_EVENT(-800312339, player_id, {268435456, 0, 797935737})
                 NET.FUNCTION.FIRE_EVENT(630191280, player_id, {268435456, 1853073811, 576308009, 1416651674, 0, 0, 1335345922, 0})
                 NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {268435456, 635702722, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1})
@@ -1097,86 +988,38 @@ NET = {
                 NET.FUNCTION.FIRE_EVENT(1214811719, player_id, {268435456, 1, 1, 1, 458921163})
                 NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {268435456, 0, 577623592, 0, 0})
                 NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {268435456, 0, 797647480})
-                --S0
-                NET.FUNCTION.FIRE_EVENT(623462469, player_id, {268435456})
-                NET.FUNCTION.FIRE_EVENT(-2102799478, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(1980857009, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-1013606569, player_id, {268435456})
-                NET.FUNCTION.FIRE_EVENT(-1544003568, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-353458099, player_id, {268435456})
-                NET.FUNCTION.FIRE_EVENT(-1604421397, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                --MS3
-                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(630191280, player_id, {268435456, 1269567919, 117455618, 2112734064, 0, 0, 2038512487, 0})
+                NET.FUNCTION.FIRE_EVENT(921195243, player_id, {268435456, 280501093, 0})
+                NET.FUNCTION.FIRE_EVENT(728200248, player_id, {268435456, 1194964156, 357230186})
+                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {268435456, 0, 0, 0, 134219114, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1091407522, player_id, {268435456, 1, 808555509})
+                NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {268435456, 0, 619225562, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {268435456, 0, 490765514})
+                NET.FUNCTION.FIRE_EVENT(-800312339, player_id, {268435456, 0, 1066529362})
+                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {268435456, 1826118122, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1})
+                NET.FUNCTION.FIRE_EVENT(1925046697, player_id, {268435456, 1974290499, 1})
+                NET.FUNCTION.FIRE_EVENT(1214811719, player_id, {268435456, 1, 1, 1, 411497286})
+                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {268435456, 0, 0, 0, 1809210831, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(-1091407522, player_id, {268435456, 1, 513813295})
+                NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {268435456, 0, 748216566, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {268435456, 0, 1579964530})
+                NET.FUNCTION.FIRE_EVENT(-642704387, player_id, {268435456, -994541138, 0, 0, 0, 0, 0, 0, 0, 2082664489, 0, 0, 0})
                 --S4
+                NET.FUNCTION.FIRE_EVENT(1269949700, player_id, {268435456, 0, 2147483647})
                 NET.FUNCTION.FIRE_EVENT(-1547064369, player_id, {268435456, 0, 2147483647})
                 NET.FUNCTION.FIRE_EVENT(-2122488865, player_id, {268435456, 0, 2147483647})
                 NET.FUNCTION.FIRE_EVENT(-2026172248, player_id, {268435456, 0, 0, 0, 1})
-                --S1
-                NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {268435456, 2128065066})
-                --S3
-                NET.FUNCTION.FIRE_EVENT(630191280, player_id, {268435456, 1269567919, 117455618, 2112734064, 0, 0, 2038512487, 0})
-                NET.FUNCTION.FIRE_EVENT(921195243, player_id, {268435456, 280501093, 0})
-                NET.FUNCTION.FIRE_EVENT(728200248, player_id, {268435456, 1194964156, 357230186})
-                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {268435456, 0, 0, 0, 134219114, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-1091407522, player_id, {268435456, 1, 808555509})
-                NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {268435456, 0, 619225562, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {268435456, 0, 490765514})
-                --S0
-                NET.FUNCTION.FIRE_EVENT(1980857009, player_id, {268435456})
-                NET.FUNCTION.FIRE_EVENT(-2051197492, player_id, {268435456})
-                NET.FUNCTION.FIRE_EVENT(-1713699293, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                --S2
-                NET.FUNCTION.FIRE_EVENT(-445044249, player_id, {268435456, 28, -1, -1})
+                --MS3
+                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {268435456})
                 --MS8
                 NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {268435456, 78335916, 0, 0})
-                --S3
-                NET.FUNCTION.FIRE_EVENT(-800312339, player_id, {268435456, 0, 1066529362})
-                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {268435456, 1826118122, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1})
-                NET.FUNCTION.FIRE_EVENT(1925046697, player_id, {268435456, 1974290499, 1})
-                NET.FUNCTION.FIRE_EVENT(1214811719, player_id, {268435456, 1, 1, 1, 411497286})
-                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {268435456, 0, 0, 0, 1809210831, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-1091407522, player_id, {268435456, 1, 513813295})
-                NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {268435456, 0, 748216566, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {268435456, 0, 1579964530})
-                NET.FUNCTION.FIRE_EVENT(-642704387, player_id, {268435456, -994541138, 0, 0, 0, 0, 0, 0, 0, 2082664489, 0, 0, 0})
-                --S0
-                NET.FUNCTION.FIRE_EVENT(-1852117343, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-353458099, player_id, {268435456})
-                --MS3
-                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {268435456})
-                --S1
-                NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {268435456, 2128065066})
-                NET.FUNCTION.FIRE_EVENT(630191280, player_id, {268435456, 1269567919, 117455618, 2112734064, 0, 0, 2038512487, 0})
-                NET.FUNCTION.FIRE_EVENT(921195243, player_id, {268435456, 280501093, 0})
-                NET.FUNCTION.FIRE_EVENT(728200248, player_id, {268435456, 1194964156, 357230186})
-                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {268435456, 0, 0, 0, 134219114, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-1091407522, player_id, {268435456, 1, 808555509})
-                NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {268435456, 0, 619225562, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {268435456, 0, 490765514})
-                --S0
-                NET.FUNCTION.FIRE_EVENT(1980857009, player_id, {268435456})
-                NET.FUNCTION.FIRE_EVENT(-2051197492, player_id, {268435456})
-                NET.FUNCTION.FIRE_EVENT(-1713699293, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-445044249, player_id, {268435456, 28, -1, -1})
-                --MS8
-                NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {268435456, 78335916, 0, 0})
-                --S3
-                NET.FUNCTION.FIRE_EVENT(-800312339, player_id, {268435456, 0, 1066529362})
-                NET.FUNCTION.FIRE_EVENT(-1638522928, player_id, {268435456, 1826118122, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1})
-                NET.FUNCTION.FIRE_EVENT(1925046697, player_id, {268435456, 1974290499, 1})
-                NET.FUNCTION.FIRE_EVENT(1214811719, player_id, {268435456, 1, 1, 1, 411497286})
-                NET.FUNCTION.FIRE_EVENT(1318264045, player_id, {268435456, 0, 0, 0, 1809210831, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-1091407522, player_id, {268435456, 1, 513813295})
-                NET.FUNCTION.FIRE_EVENT(1638329709, player_id, {268435456, 0, 748216566, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(1932558939, player_id, {268435456, 0, 1579964530})
-                NET.FUNCTION.FIRE_EVENT(-642704387, player_id, {268435456, -994541138, 0, 0, 0, 0, 0, 0, 0, 2082664489, 0, 0, 0})
-                --S0
-                NET.FUNCTION.FIRE_EVENT(-1852117343, player_id, {268435456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                NET.FUNCTION.FIRE_EVENT(-353458099, player_id, {268435456})
-                --MS3
-                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {268435456})
+
                 -- Was used in unfair, S3??
                 NET.FUNCTION.FIRE_EVENT(1017995959, player_id, {27, 0})
+
+                -- Mailbomb (S5)
+                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {67108864, 122, 1})
             end,
 
             AGGRESSIVE = function(player_id)
@@ -2448,12 +2291,10 @@ NET = {
         menu.action(KICK_OPTIONS, "[STAND] Aggressive Kick", {"akick"}, "Unblockable if target isn't host & detected as a threat.", function() NET.COMMAND.KICK.AGGRESSIVE(player_id) end)
         menu.action(KICK_OPTIONS, "[STAND] Love Letter Kick", {}, "Discrete and unblockable.\nCannot be used against host.\nUnblockable when you are host.", function() menu.trigger_commands("loveletterkick"..players.get_name(player_id)) end)
         menu.action(KICK_OPTIONS, "[STAND] Host Kick", {}, "Very effective against modders with protections.\nUnblockable when you are host.", function() menu.trigger_commands("hostkick"..players.get_name(player_id)) end)
-        menu.action(KICK_OPTIONS, "[NET] Airstrike Kick", {"airkick"}, "Blocked by propular menus.", function() NET.COMMAND.KICK.BIG(player_id) end)
-        menu.action(KICK_OPTIONS, "[NET] Big Kick", {"bigkick"}, "Blocked by propular menus.", function() NET.COMMAND.KICK.BIG(player_id) end)
-        menu.action(KICK_OPTIONS, "[NET] Little Kick", {"litkick"}, "Blocked by propular menus.", function() NET.COMMAND.KICK.LITTLE(player_id) end)
+        menu.action(KICK_OPTIONS, "[NET] Airstrike Kick", {"airkick"}, "Blocked by popular menus.", function() NET.COMMAND.KICK.AIRSTRIKE(player_id) end)
         menu.action(KICK_OPTIONS, "[NET] Backstab Kick", {"stabkick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.BACKSTAB(player_id) end)
         menu.action(KICK_OPTIONS, "[ADDICT] Eviction Notice", {"ekick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.EVICTION_NOTICE(player_id) end)
-        menu.action(KICK_OPTIONS, "[STAND] Legit Kick", {"lkick"}, "Don't use against modders.", function() NET.COMMAND.KICK.LEGIT(player_id) end)
+        menu.action(KICK_OPTIONS, "[STAND] Pool's Closed Kick", {}, "Blocked by popular menus.", function() menu.trigger_commands("aids"..players.get_name(player_id)) end)
         local CRASH_OPTIONS = menu.list(MODERATE_LIST, "Crashes")
         menu.action(CRASH_OPTIONS, "[STAND] 2Take1 Crash", {"2t1crash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH["2TAKE1"](player_id) end)
         menu.action(CRASH_OPTIONS, "[STAND] Warhead Crash", {"warcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.WARHEAD(player_id) end)
