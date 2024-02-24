@@ -13,17 +13,26 @@
 ]]
 
 --[[
-Version 1.4a
-[+] Improved Airstrike Kick
-[+] Added Pool's Closed Kick
-[~] Fixed Airstrike Kick
-[-] Removed Big Kick
-[-] Removed Little Kick
-[-] Removed Legit Kick
+Version 1.5
+[+] Added Super Radar
+[+] Added Drift Tyres
+[+] Added Vehicle Windows Control
+[+] Added Passive Mode
+[+] Added Kill Player
+[~] Improved Backstab Kick
+[~] Improved Express Crash
+[~] Improved Chicken Crash
+[~] Improved Anti Spectate
+[~] Improved Anti Tow-Truck
+[~] Improved Playerlist
+[~] Fixed Express Crash
+[-] Removed Soup Crash
+[-] Removed Dynamite Crash
+[-] Removed Crash All Options (Default Express)
 ]]
 
 IN_DEV = false
-VERSION = "1.4a"
+VERSION = "1.5"
 
 -- Libraries
 util.require_natives(1676318796)
@@ -83,7 +92,6 @@ NET = {
         Ignore_Host = false,
         Ignore_Modded_Stats = false,
         Kick_Method = 1,
-        Crash_Method = 3,
 
         To_Level_Up_To = 120,
 
@@ -520,6 +528,34 @@ NET = {
             HELI = {"akula","anihilator2","buzzard","hunter","havok","savage","valkyrie","swift2"},
             MILITARY = {"apc","rhino","khanjali","thruster","nightshark","riot2","riot"},
         },
+
+        FLAG = {
+            DF_None = 0,
+            DF_IsAccurate = 1,
+            DF_MeleeDamage = 2,
+            DF_SelfDamage = 4,
+            DF_ForceMeleeDamage = 8,
+            DF_IgnorePedFlags = 16,
+            DF_ForceInstantKill = 32,
+            DF_IgnoreArmor = 64,
+            DF_IgnoreStatModifiers = 128,
+            DF_FatalMeleeDamage = 256,
+            DF_AllowHeadShot = 512,
+            DF_AllowDriverKill = 1024,
+            DF_KillPriorToClearedWantedLevel = 2048,
+            DF_SuppressImpactAudio = 4096,
+            DF_ExpectedPlayerKill = 8192,
+            DF_DontReportCrimes = 16384,
+            DF_PtFxOnly = 32768,
+            DF_UsePlayerPendingDamage = 65536,
+            DF_AllowCloneMeleeDamage = 131072,
+            DF_NoAnimatedMeleeReaction = 262144,
+            DF_IgnoreRemoteDistCheck = 524288,
+            DF_VehicleMeleeHit = 1048576,
+            DF_EnduranceDamageOnly = 2097152,
+            DF_HealthDamageOnly = 4194304,
+            DF_DamageFromBentBullet = 8388608
+        }
     },
 
     FUNCTION = {
@@ -679,7 +715,8 @@ NET = {
         end,
 
         IS_SPECTATING = function(player_id)
-            return bitTest(memory.read_int(memory.script_global(GlobalplayerBD + 1 + (player_id * 463) + 199)), 2)
+            local function bitTest(bits, place) return (bits & (1 << place)) != 0 end
+            return bitTest(memory.read_int(memory.script_global(NET.VARIABLE.GAME.GlobalplayerBD + 1 + (player_id * 463) + 199)), 2)
         end,
 
         KICK_PLAYER = function(player_id)
@@ -895,17 +932,23 @@ NET = {
             end
             return SpawnedVehicle
         end,
+
+        SHOOT_EVENT = function(player_id, weaponHash, flags)
+            local CWeaponDamageEventTrigger = memory.rip(memory.scan("E8 ? ? ? ? 44 8B 65 80 41 FF C7") + 1)
+            local pPed =  entities.handle_to_pointer(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id))
+            util.call_foreign_function(CWeaponDamageEventTrigger, entities.handle_to_pointer(players.user_ped()), pPed, pPed + 0x90, 0, 1, weaponHash, 500.0, 0, 0, flags, 0, 0, 0, 0, 0, 0, 0, 0.0)
+        end,
     },
 
     COMMAND = {
 
         KICK = {
-            EVICTION_NOTICE = function(player_id)
+            EVICTION_NOTICE = function(player_id) -- (S0)
                 local int_min = -2147483647
                 local int_max = 2147483647
                 for i = 1, 15 do
                     NET.FUNCTION.FIRE_EVENT(1613825825, player_id, {20, 1, -1, -1, -1, -1, math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max), player_id, math.random(int_min, int_max), math.random(int_min, int_max), math.random(int_min, int_max)})
-                    NET.FUNCTION.FIRE_EVENT(1613825825, player_id, {20, 1, -1, -1, -1, -1}) -- Unique
+                    NET.FUNCTION.FIRE_EVENT(1613825825, player_id, {20, 1, -1, -1, -1, -1})
                 end
                 menu.trigger_commands("givesh" .. players.get_name(player_id))
                 util.yield()
@@ -915,13 +958,16 @@ NET = {
                 end
             end,
 
-            BACKSTAB = function(player_id) -- Net exclusive / S0
-                for next = 1, 15 do
-                    NET.FUNCTION.FIRE_EVENT(968269233, player_id, {players.user(), 4, math.random(25, 100), 1, 1, 1}) -- Unique
-                end
+            BACKSTAB = function(player_id) -- Net exclusive (S0) (S3) (S5)
+                -- Was used in unfair, S3??
+                NET.FUNCTION.FIRE_EVENT(1017995959, player_id, {27, 0})
+                -- Mailbomb (S5)
+                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {67108864, 122, 1})
+                -- Backstab (S0)
+                NET.FUNCTION.FIRE_EVENT(968269233, player_id, {players.user(), 4, math.random(25, 100), 1, 1, 1}) -- Unique
             end,
 
-            AIRSTRIKE = function(player_id) -- (S0) (S1) (S2) (S3) (S4) (S5)
+            AIRSTRIKE = function(player_id) -- (S0) (S1) (S2) (S3) (S4)
                 menu.trigger_commands("givesh"..players.get_name(player_id))
                 --S0
                 NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {268435456, 1062174267, 0, 0})
@@ -1014,12 +1060,6 @@ NET = {
                 NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {268435456})
                 --MS8
                 NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {268435456, 78335916, 0, 0})
-
-                -- Was used in unfair, S3??
-                NET.FUNCTION.FIRE_EVENT(1017995959, player_id, {27, 0})
-
-                -- Mailbomb (S5)
-                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {67108864, 122, 1})
             end,
 
             AGGRESSIVE = function(player_id)
@@ -1262,7 +1302,6 @@ NET = {
                     end
                     ENTITY.SET_ENTITY_COORDS_NO_OFFSET(SelfPlayerPed, PreviousPlayerPos.x, PreviousPlayerPos.y, PreviousPlayerPos.z, false, true, true)
                 end,
-
             },
 
             ["2TAKE1"] = function(player_id) -- (T9) (S3) (NB)
@@ -1291,13 +1330,12 @@ NET = {
                 end
             end,
 
-            EXPRESS = function(player_id) -- (S3) (STAND'S ELEGANT CRASH)
-                for next = 1, 15 do
-                    NET.FUNCTION.FIRE_EVENT(-375628860, player_id, {1, math.random(-2147483647, 2147483647)})
-                end
-            end,
+            EXPRESS = function(player_id) -- (NB) (S3) (S2)
+                -- Express / Elegant (NB) (S3)
+                NET.FUNCTION.SHOOT_EVENT(player_id, 0xFF956666, NET.TABLE.FLAG.DF_IgnoreRemoteDistCheck)
+                for next = 1, 5 do NET.FUNCTION.FIRE_EVENT(-375628860, player_id, {1, math.random(-2147483647, 2147483647)}) end
 
-            DYNAMITE = function(player_id) -- (S2)
+                --Dynamite (S2)
                 menu.trigger_commands("givesh"..players.get_name(player_id))
                 NET.FUNCTION.FIRE_EVENT(2067191610, player_id, {0, 0, -12988, -99097, 0})
                 NET.FUNCTION.FIRE_EVENT(323285304, player_id, {0, 0, -12988, -99097, 0})
@@ -1305,16 +1343,26 @@ NET = {
                 NET.FUNCTION.FIRE_EVENT(323285304, player_id, {323285304, 64, 2139114019, 14299, 40016, 11434, 4595, 25992})
             end,
 
-            CHICKEN = function(player_id) -- (X9)
+            CHICKEN = function(player_id) -- (X9) (XA)
                 local chicken_model = util.joaat("A_C_HEN") or 1794449327
                 util.request_model(chicken_model)
+                util.request_model(-1011537562)
+                util.request_model(-541762431)
                 local pos = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id))
-                local chicken  = entities.create_ped(28, chicken_model, pos, 0)
+                local chicken = entities.create_ped(28, chicken_model, pos, 0)
+                local PED1  = entities.create_ped(28,-1011537562,pos,0)
+                local PED2  = entities.create_ped(28,-541762431,pos,0)
                 WEAPON.GIVE_WEAPON_TO_PED(chicken, -1813897027, 1, true, true)
+                WEAPON.GIVE_WEAPON_TO_PED(PED1,-1813897027,1,true,true)
+                WEAPON.GIVE_WEAPON_TO_PED(PED2,-1813897027,1,true,true)
                 util.yield(1000)
                 TASK.TASK_THROW_PROJECTILE(chicken, pos.x, pos.y, pos.z, 0, 0)
+                TASK.TASK_THROW_PROJECTILE(PED1,pos.x,pos.y,pos.z,0,0)
+                TASK.TASK_THROW_PROJECTILE(PED2,pos.x,pos.y,pos.z,0,0)
                 util.yield(5000)
                 entities.delete(chicken)
+                entities.delete(PED1)
+                entities.delete(PED2)
             end,
 
             -- Night
@@ -1368,22 +1416,6 @@ NET = {
                 util.yield(2000)
                 entities.delete_by_handle(Rui_task)
                 entities.delete_by_handle(ped_task2)
-            end,
-
-            SOUP = function(player_id) -- (XA)
-                util.request_model(-1011537562)
-                util.request_model(-541762431)
-                local pos = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id))
-                local PED1  = entities.create_ped(28,-1011537562,pos,0)
-                local PED2  = entities.create_ped(28,-541762431,pos,0)
-                WEAPON.GIVE_WEAPON_TO_PED(PED1,-1813897027,1,true,true)
-                WEAPON.GIVE_WEAPON_TO_PED(PED2,-1813897027,1,true,true)
-                util.yield(1000)
-                TASK.TASK_THROW_PROJECTILE(PED1,pos.x,pos.y,pos.z,0,0)
-                TASK.TASK_THROW_PROJECTILE(PED2,pos.x,pos.y,pos.z,0,0)
-                util.yield(5000)
-                entities.delete(PED1)
-                entities.delete(PED2)
             end,
 
             -- Ryze
@@ -1874,14 +1906,7 @@ NET = {
         
             for next = 1, #ToCrash do
                 if players.exists(ToCrash[next]) then
-                    local PlayerName = players.get_name(ToCrash[next])
-                    if NET.VARIABLE.Crash_Method == 1 then -- Express
-                        NET.COMMAND.CRASH.EXPRESS(ToCrash[next])
-                    elseif NET.VARIABLE.Crash_Method == 2 then -- Dynamite
-                        NET.COMMAND.CRASH.DYNAMITE(ToCrash[next])
-                    elseif NET.VARIABLE.Crash_Method == 3 then -- Elegant
-                        menu.trigger_commands("crash"..PlayerName)
-                    end
+                    NET.COMMAND.CRASH.EXPRESS(ToCrash[next])
                 end
         
                 util.yield(100)
@@ -2276,6 +2301,7 @@ NET = {
                         .."\nRank: "..tostring(players.get_rank(player_id))
                         .."\nMoney: $"..tostring(NET.FUNCTION.FORMAT_NUMBER(players.get_money(player_id)))
                         .."\nK/D: "..tostring(players.get_kd(player_id))
+                        .."\nPing: "..tostring(NETWORK.NETWORK_GET_AVERAGE_PING(player_id))
                     )
                     end
                 end
@@ -2292,34 +2318,33 @@ NET = {
         menu.action(KICK_OPTIONS, "[STAND] Love Letter Kick", {}, "Discrete and unblockable.\nCannot be used against host.\nUnblockable when you are host.", function() menu.trigger_commands("loveletterkick"..players.get_name(player_id)) end)
         menu.action(KICK_OPTIONS, "[STAND] Host Kick", {}, "Very effective against modders with protections.\nUnblockable when you are host.", function() menu.trigger_commands("hostkick"..players.get_name(player_id)) end)
         menu.action(KICK_OPTIONS, "[NET] Airstrike Kick", {"airkick"}, "Blocked by popular menus.", function() NET.COMMAND.KICK.AIRSTRIKE(player_id) end)
-        menu.action(KICK_OPTIONS, "[NET] Backstab Kick", {"stabkick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.BACKSTAB(player_id) end)
+        menu.action(KICK_OPTIONS, "[NET] Backstab Kick", {"stabkick"}, "Blocked by popular menus.", function() NET.COMMAND.KICK.BACKSTAB(player_id) end)
         menu.action(KICK_OPTIONS, "[ADDICT] Eviction Notice", {"ekick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.EVICTION_NOTICE(player_id) end)
         menu.action(KICK_OPTIONS, "[STAND] Pool's Closed Kick", {}, "Blocked by popular menus.", function() menu.trigger_commands("aids"..players.get_name(player_id)) end)
         local CRASH_OPTIONS = menu.list(MODERATE_LIST, "Crashes")
         menu.action(CRASH_OPTIONS, "[STAND] 2Take1 Crash", {"2t1crash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH["2TAKE1"](player_id) end)
         menu.action(CRASH_OPTIONS, "[STAND] Warhead Crash", {"warcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.WARHEAD(player_id) end)
-        menu.action(CRASH_OPTIONS, "[NET] Mortar Crash", {""}, "Blocked by most menus.", function() NET.COMMAND.CRASH.MORTAR(player_id) end)
-        menu.action(CRASH_OPTIONS, "[NET] Express Crash", {"xpresscrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.ELEGANT(player_id) end)
-        menu.action(CRASH_OPTIONS, "[NET] Dynamite Crash", {"dcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.DYNAMITE(player_id) end)
+        menu.action(CRASH_OPTIONS, "[NET] Express Crash", {"xpresscrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.EXPRESS(player_id) end)
+        menu.action(CRASH_OPTIONS, "[NET] Mortar Crash", {"mortarcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.MORTAR(player_id) end)
         menu.action(CRASH_OPTIONS, "[NET] Chicken Crash", {"hencrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.CHICKEN(player_id) end)
         menu.action(CRASH_OPTIONS, "[NIGHT] Phantom Crash", {"phantomcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.PHANTOM(player_id) end)
-        menu.action(CRASH_OPTIONS, "[NIGHT] Soup Crash", {"soupcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SOUP(player_id) end)
         menu.action(CRASH_OPTIONS, "[RYZE] Chinese Crash", {"ccrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.CHINESE(player_id) end)
         menu.action(CRASH_OPTIONS, "[RYZE] Jesus Crash", {"jcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.JESUS(player_id) end)
         menu.action(CRASH_OPTIONS, "[RYZE] Lamp Crash", {"lcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.LAMP(player_id) end)
         menu.action(CRASH_OPTIONS, "[RYZE] Task Crash", {"tcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.TASK(player_id) end)
         local TROLLING_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Trolling")
-        menu.toggle_loop(TROLLING_LIST, "Smokescreen", {""}, "Fills up their screen with black smoke.", function() NET.COMMAND.SMOKESCREEN_PLAYER(player_id) end, function() local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id) GRAPHICS.REMOVE_PARTICLE_FX(ptfx) STREAMING.REMOVE_NAMED_PTFX_ASSET("scr_as_trans") end)
-        menu.toggle_loop(TROLLING_LIST, "Launch Player", {""}, "", function() NET.COMMAND.LAUNCH_PLAYER(player_id) end, function() if veh ~= 0 and ENTITY.DOES_ENTITY_EXIST(veh) then entities.delete(veh) end end)
-        menu.toggle_loop(TROLLING_LIST, "Stumble Player", {""}, "", function() NET.COMMAND.STUMBLE_PLAYER(player_id) end)
+        menu.action(TROLLING_LIST, "Kill", {}, "You will always be blamed, but this is super reliable.\nWorks for players in interior.", function() local Type = nil if not players.is_in_interior(player_id) then Type = util.joaat("WEAPON_ASSAULTRIFLE_MK2") else Type = util.joaat("WEAPON_SNOWBALL") end NET.FUNCTION.SHOOT_EVENT(player_id, Type, NET.TABLE.FLAG.DF_IsAccurate | NET.TABLE.FLAG.DF_IgnorePedFlags | NET.TABLE.FLAG.DF_SuppressImpactAudio | NET.TABLE.FLAG.DF_IgnoreRemoteDistCheck) end)
+        menu.toggle_loop(TROLLING_LIST, "Smokescreen", {}, "Fills up their screen with black smoke.", function() NET.COMMAND.SMOKESCREEN_PLAYER(player_id) end, function() local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id) GRAPHICS.REMOVE_PARTICLE_FX(ptfx) STREAMING.REMOVE_NAMED_PTFX_ASSET("scr_as_trans") end)
+        menu.toggle_loop(TROLLING_LIST, "Launch Player", {}, "", function() NET.COMMAND.LAUNCH_PLAYER(player_id) end, function() if veh ~= 0 and ENTITY.DOES_ENTITY_EXIST(veh) then entities.delete(veh) end end)
+        menu.toggle_loop(TROLLING_LIST, "Stumble Player", {}, "", function() NET.COMMAND.STUMBLE_PLAYER(player_id) end)
         local PROP_GLITCH_LIST = menu.list(TROLLING_LIST, "Prop Glitch Loop")
-        menu.list_select(PROP_GLITCH_LIST, "Object", {""}, "Object to glitch the player.", NET.TABLE.GLITCH_OBJECT.NAME, 1, function(index) NET.VARIABLE.Object_Hash = util.joaat(NET.TABLE.GLITCH_OBJECT.OBJECT[index]) end)
-        menu.slider(PROP_GLITCH_LIST, "Spawn delay", {""}, "", 0, 3000, 50, 10, function(amount) delay = amount end)
+        menu.list_select(PROP_GLITCH_LIST, "Object", {}, "Object to glitch the player.", NET.TABLE.GLITCH_OBJECT.NAME, 1, function(index) NET.VARIABLE.Object_Hash = util.joaat(NET.TABLE.GLITCH_OBJECT.OBJECT[index]) end)
+        menu.slider(PROP_GLITCH_LIST, "Spawn delay", {}, "", 0, 3000, 50, 10, function(amount) delay = amount end)
         menu.toggle(PROP_GLITCH_LIST, "Glitch player", {}, "", function(toggled) NET.COMMAND.GLITCH_PLAYER(player_id, toggled) end)
         local NEUTRAL_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Neutral")
         menu.toggle(NEUTRAL_LIST, "Spectate", {}, "", function(Enabled) NET.COMMAND.SPECTATE_PLAYER(player_id, Enabled) end)
-        menu.toggle_loop(NEUTRAL_LIST, "Ghost Player", {""}, "", function() NETWORK.SET_REMOTE_PLAYER_AS_GHOST(player_id, true) end, function() NETWORK.SET_REMOTE_PLAYER_AS_GHOST(player_id, false) end)
-        menu.toggle(NEUTRAL_LIST, "Fake Money Drop", {""}, "", function(Enabled) NET.COMMAND.FAKE_MONEY_DROP(player_id, Enabled) end)
+        menu.toggle_loop(NEUTRAL_LIST, "Ghost Player", {}, "", function() NETWORK.SET_REMOTE_PLAYER_AS_GHOST(player_id, true) end, function() NETWORK.SET_REMOTE_PLAYER_AS_GHOST(player_id, false) end)
+        menu.toggle(NEUTRAL_LIST, "Fake Money Drop", {}, "", function(Enabled) NET.COMMAND.FAKE_MONEY_DROP(player_id, Enabled) end)
         menu.toggle_loop(NEUTRAL_LIST, "Vanity Particles", {}, "", function(Enabled) NET.COMMAND.VANITY_PARTICLES(player_id) end)
         local FRIENDLY_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Friendly")
         local SPAWN_VEHICLE_LIST = menu.list(FRIENDLY_LIST, "Spawn Vehicle") for i, types in pairs(NET.TABLE.VEHICLE) do local LIST = menu.list(SPAWN_VEHICLE_LIST, tostring(i)) for j, k in pairs(types) do menu.action(LIST, "Spawn - "..tostring(k), {}, "", function() menu.trigger_commands("as "..players.get_name(player_id).." "..k) end) end end
@@ -2327,14 +2352,14 @@ NET = {
         menu.toggle(FRIENDLY_LIST, "Money Drop", {}, "Limited money drop, must be close to player.", function(Enabled) NET.COMMAND.MONEY_DROP_PLAYER(player_id, Enabled) end)
         menu.action(FRIENDLY_LIST, "Give All Collectibles", {}, "Up to $300k.\nCan only be used once per player.", function() NET.FUNCTION.TRIGGER_GIVE_ALL_COLLECTIBLES(player_id) end)--menu.trigger_commands("givecollectibles"..players.get_name(player_id)) end)
         menu.action(FRIENDLY_LIST, "Gift Spawned Vehicle", {}, "Spawn fully tuned deathbike2 for best results.\nPlayer must have full garage.\nGifts the latest spawned car.", function() menu.trigger_commands("gift"..players.get_name(player_id)) end)
-        menu.toggle(FRIENDLY_LIST, "Helpful Events", {""}, "Never Wanted, Off The Radar, Vehicle God, Auto-Heal.", function(Enabled) NET.COMMAND.HELPFUL_EVENTS(player_id, Enabled) end)
+        menu.toggle(FRIENDLY_LIST, "Helpful Events", {}, "Never Wanted, Off The Radar, Vehicle God, Auto-Heal.", function(Enabled) NET.COMMAND.HELPFUL_EVENTS(player_id, Enabled) end)
         menu.action(FRIENDLY_LIST, "Fix Loading Screen", {"fix"}, "Useful when stuck in a loading screen.", function() NET.COMMAND.FIX_LOADING_SCREEN(player_id) end)
-        menu.action(FRIENDLY_LIST, "Reduce Loading Time", {""}, "Attempts to help the player by giving them script host.", function() NET.COMMAND.GIVE_SCRIPT_HOST(player_id) end)
+        menu.action(FRIENDLY_LIST, "Reduce Loading Time", {}, "Attempts to help the player by giving them script host.", function() NET.COMMAND.GIVE_SCRIPT_HOST(player_id) end)
         local TELEPORT_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Teleport")
-        menu.action(TELEPORT_LIST, "Goto", {""}, "", function() menu.trigger_commands("tp"..players.get_name(player_id)) end)
+        menu.action(TELEPORT_LIST, "Goto", {}, "", function() menu.trigger_commands("tp"..players.get_name(player_id)) end)
         menu.action(TELEPORT_LIST, "Bring", {""}, "", function() menu.trigger_commands("summon"..players.get_name(player_id)) end)
-        menu.action(TELEPORT_LIST, "Teleport Into Their Vehicle", {""}, "", function() menu.trigger_commands("tpveh"..players.get_name(player_id)) end)
-        menu.action(TELEPORT_LIST, "Teleport To Casino", {""}, "", function() menu.trigger_commands("casinotp"..players.get_name(player_id)) end)
+        menu.action(TELEPORT_LIST, "Teleport Into Their Vehicle", {}, "", function() menu.trigger_commands("tpveh"..players.get_name(player_id)) end)
+        menu.action(TELEPORT_LIST, "Teleport To Casino", {}, "", function() menu.trigger_commands("casinotp"..players.get_name(player_id)) end)
         menu.toggle(NET.PROFILE[tostring(player_id)].Menu, "Block Traffic", {}, "Stops exchanging data with player.", function(Enabled) local TargetName = players.get_name(player_id) if Enabled then menu.trigger_commands("timeout"..TargetName.." on") else menu.trigger_commands("timeout"..TargetName.." off") end end)
         menu.action(NET.PROFILE[tostring(player_id)].Menu, "Delete", {}, "Delete the label if the player isn't in the session anymore.", function() MenuBuffer:delete() end)
     end,
@@ -2377,30 +2402,53 @@ NET = {
 -- Main Options
 local Title = menu.divider(menu.my_root(), "NET.REAPER")
 local SELF_LIST = menu.list(menu.my_root(), "Self")
-local VANITY_LIST = menu.list(SELF_LIST, "Vanity Particles")
-menu.list_select(VANITY_LIST, "Particles", {}, "", {"Rainbow", "Brown", "Blue", "Green", "Orange", "Greyblack"}, 1, function(Value) vanity = Value end)
-menu.toggle_loop(VANITY_LIST, "Enable", {}, "", function(Enabled) NET.COMMAND.VANITY_PARTICLES(players.user(), vanity) end)
+
 local PROFILES_LIST = menu.list(SELF_LIST, "Profiles")
 menu.list_select(PROFILES_LIST, "Profiles", {}, "", NET.TABLE.PROFILE, 1, function(Value) NET.VARIABLE.Current_Profile = NET.TABLE.PROFILE[Value] end)
 menu.toggle(PROFILES_LIST, "Mute Notifications", {}, "", NET.COMMAND.MUTE_STAND_REACTION_NOTIFICATIONS)
 menu.toggle(PROFILES_LIST, "Disable Reactions", {}, "Disables kick & crash reactions.", NET.COMMAND.DISABLE_STAND_REACTIONS)
 menu.action(PROFILES_LIST, "Set Profile", {}, "", function() if NET.VARIABLE.Current_Profile == 1 then NET.COMMAND.SET_PROFILE_DEFAULT() elseif NET.VARIABLE.Current_Profile == 2 then NET.COMMAND.SET_PROFILE_STRICT() elseif NET.VARIABLE.Current_Profile == 3 then NET.COMMAND.SET_PROFILE_WARRIOR() end end)
+
 local WEAPON_LIST = menu.list(SELF_LIST, "Weapons")
 menu.toggle_loop(WEAPON_LIST, "Fast Hand", {}, "Faster weapon swapping.", function() if TASK.GET_IS_TASK_ACTIVE(players.user_ped(), 56) then PED.FORCE_PED_AI_AND_ANIMATION_UPDATE(players.user_ped()) end end)
 menu.toggle_loop(WEAPON_LIST, "Hitbox Expander", {}, "Expands every player's hitbox.", NET.COMMAND.EXPAND_ALL_HITBOXES)
-menu.toggle_loop(WEAPON_LIST,"Rocket Aimbot", {}, "Lock onto players with homing rpg.", NET.COMMAND.LOCK_ONTO_PLAYERS, function() for i, player_id in pairs(players.list_except(true)) do local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id) PLAYER.REMOVE_PLAYER_TARGETABLE_ENTITY(players.user(), ped) end end)
+menu.toggle_loop(WEAPON_LIST, "Rocket Aimbot", {}, "Lock onto players with homing rpg.", NET.COMMAND.LOCK_ONTO_PLAYERS, function() for i, player_id in pairs(players.list_except(true)) do local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id) PLAYER.REMOVE_PLAYER_TARGETABLE_ENTITY(players.user(), ped) end end)
+
 local VEHICLE_LIST = menu.list(SELF_LIST, "Vehicle")
 menu.toggle_loop(VEHICLE_LIST, "Vehicle Rocket Aimbot", {}, "", NET.COMMAND.VEH_ROCKET_AIMBOT)
 menu.toggle_loop(VEHICLE_LIST,"Rainbow Headlights", {""}, "", function(Enabled) NET.COMMAND.RAINBOW_HEADLIGHTS(Enabled) end)
 menu.toggle(VEHICLE_LIST,"Rainbow Neons", {""}, "", function(Enabled) NET.COMMAND.RAINBOW_NEONS(Enabled) end)
+menu.toggle(VEHICLE_LIST, "Drift Tyres", {}, "", function(Enabled) VEHICLE.SET_DRIFT_TYRES(PED.GET_VEHICLE_PED_IS_USING(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())), Enabled) end)
+local VEHICLE_WINDOWS_LIST = menu.list(VEHICLE_LIST, "Vehicle Windows")
+menu.list_action(VEHICLE_WINDOWS_LIST, "Roll Up Window", {}, "", {"Left Front", "Right Front", "Left Back", "Right Back"}, function(Option) VEHICLE.ROLL_UP_WINDOW(PED.GET_VEHICLE_PED_IS_USING(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())), Option-1) end)
+menu.list_action(VEHICLE_WINDOWS_LIST, "Roll Down Window", {}, "", {"Left Front", "Right Front", "Left Back", "Right Back"}, function(Option) VEHICLE.ROLL_DOWN_WINDOW(PED.GET_VEHICLE_PED_IS_USING(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())), Option-1) end)
+
 local WORLD_LIST = menu.list(SELF_LIST, "World")
-menu.list_select(WORLD_LIST, "Stations", {}, "", NET.TABLE.RADIO.NAME, 1, function(index) NET.VARIABLE.Selected_Loud_Radio = NET.TABLE.RADIO.STATION[index] end)
-menu.toggle_loop(WORLD_LIST, "Toggle Radio", {}, "Networked", function() NET.COMMAND.TOGGLE_RADIO() end, function() if NET.VARIABLE.Party_Bus ~= nil then entities.delete_by_handle(NET.VARIABLE.Party_Bus) NET.VARIABLE.Party_Bus = nil end end)
+menu.toggle(WORLD_LIST, "Passive Mode", {}, "Ghost yourself from everybody.", function(Enabled) NETWORK.SET_LOCAL_PLAYER_AS_GHOST(Enabled) end)
 menu.toggle_loop(WORLD_LIST, "Laser Show", {}, "Networked", NET.COMMAND.LASER_SHOW)
+menu.toggle(WORLD_LIST, "Super Radar", {}, "Unzooms the minimap.", function(Enabled)
+    radar = Enabled
+    if Enabled then
+        util.create_thread(function()
+            repeat HUD.SET_RADAR_ZOOM(1400) util.yield(100) until not radar
+            HUD.SET_RADAR_ZOOM(0)
+            util.stop_thread()
+        end)
+    end
+end)
+local RADIO_LIST = menu.list(WORLD_LIST, "JBL Speaker")
+menu.list_select(RADIO_LIST, "Radio Station", {}, "", NET.TABLE.RADIO.NAME, 1, function(index) NET.VARIABLE.Selected_Loud_Radio = NET.TABLE.RADIO.STATION[index] end)
+menu.toggle_loop(RADIO_LIST, "Play Music", {}, "Networked", function() NET.COMMAND.TOGGLE_RADIO() end, function() if NET.VARIABLE.Party_Bus ~= nil then entities.delete_by_handle(NET.VARIABLE.Party_Bus) NET.VARIABLE.Party_Bus = nil end end)
+
+local VANITY_LIST = menu.list(WORLD_LIST, "Vanity Particles")
+menu.list_select(VANITY_LIST, "Particles", {}, "", {"Rainbow", "Brown", "Blue", "Green", "Orange", "Greyblack"}, 1, function(Value) vanity = Value end)
+menu.toggle_loop(VANITY_LIST, "Enable", {}, "", function(Enabled) NET.COMMAND.VANITY_PARTICLES(players.user(), vanity) end)
+
 local PROTECTION_LIST = menu.list(SELF_LIST, "Protections")
-menu.toggle_loop(PROTECTION_LIST, "Anti Tow-Truck", {}, "", function() if PED.IS_PED_IN_ANY_VEHICLE(players.user_ped()) then VEHICLE.DETACH_VEHICLE_FROM_ANY_TOW_TRUCK(entities.get_user_vehicle_as_handle(false)) end end)
+menu.toggle_loop(PROTECTION_LIST, "Anti Tow-Truck", {}, "", function() if PED.IS_PED_IN_ANY_VEHICLE(players.user_ped()) then VEHICLE.DETACH_VEHICLE_FROM_ANY_TOW_TRUCK(entities.get_user_vehicle_as_handle(false)) VEHICLE.SET_VEHICLE_DISABLE_TOWING(entities.get_user_vehicle_as_handle(false), true) end end)
 menu.toggle(PROTECTION_LIST, "Anti Spectator", {}, "You will stand still on the other player's screen.", function(Enabled) NET.VARIABLE.Spectate_Loop = Enabled end)
 ENTITY_THROTTLER_LIST = menu.list(PROTECTION_LIST, "Entity Throttler", {}, "Great anti object crash & anti ferris wheel troll.") pcall(require("lib.net.Throttler"))
+
 local SELF_RECOVERY_LIST = menu.list(SELF_LIST, "Recovery")
 SLOTBOT_LIST = menu.list(SELF_RECOVERY_LIST, "[SAFE] Slotbot", {}, "", function() require("lib.net.SlotBot") end)
 MONEY_LIST = menu.list(SELF_RECOVERY_LIST, "[SAFE] Money Recovery", {}, "", function() require("lib.net.Money") end)
@@ -2410,13 +2458,15 @@ PLAYERS_LIST = menu.list(menu.my_root(), "Players")
 menu.list_select(PLAYERS_LIST, "Target", {}, "", NET.TABLE.METHOD.PLAYER, 1, function(Value) NET.VARIABLE.Players_To_Affect = Value NET.CREATE_NET_PROFILES_SPECIFIC() end)
 menu.toggle(PLAYERS_LIST, "Ignore Host", {}, "Great option if you don't want to get host kicked.", function(Enabled) NET.VARIABLE.Ignore_Host = Enabled end)
 menu.toggle(PLAYERS_LIST, "Ignore Modded Stats", {}, "Ignores players with modded stats.", function(Enabled) NET.VARIABLE.Ignore_Modded_Stats = Enabled end)
+
 local ALL_PLAYERS_LIST = menu.list(PLAYERS_LIST, "All Players", {}, "Related to target.")
+
 local MODERATE_PLAYERS_LIST = menu.list(ALL_PLAYERS_LIST, "Moderate")
 menu.divider(MODERATE_PLAYERS_LIST, "Kicks") -- Kicks
 menu.list_select(MODERATE_PLAYERS_LIST, "Kick Method", {}, "", NET.TABLE.METHOD.KICK, 1, function(Value) NET.VARIABLE.Kick_Method = Value end)
 menu.action(MODERATE_PLAYERS_LIST, "Kick Players", {}, "", NET.COMMAND.KICK_PLAYERS)
 menu.divider(MODERATE_PLAYERS_LIST, "Crashes") -- Crashes
-menu.list_select(MODERATE_PLAYERS_LIST, "Crash Method", {}, "", NET.TABLE.METHOD.CRASH, 3, function(Value) NET.VARIABLE.Crash_Method = Value end)
+
 local SERVER_CRASH_LIST = menu.list(MODERATE_PLAYERS_LIST, "Server Crashes", {}, "These crashes will affect everyone in the server regardless of current target selection.")
 menu.action(SERVER_CRASH_LIST, "[RYZE] AIO Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.AIO() end)
 menu.action(SERVER_CRASH_LIST, "[NIGHT] Moonstar Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.MOONSTAR() end)
@@ -2424,10 +2474,11 @@ menu.action(SERVER_CRASH_LIST, "[NIGHT] Rope Crash", {}, "Blocked by most menus.
 menu.action(SERVER_CRASH_LIST, "[NIGHT] Land Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.LAND() end)
 menu.action(SERVER_CRASH_LIST, "[NIGHT] Umbrella V8 Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.UMBRELLAV8() end)
 menu.action(SERVER_CRASH_LIST, "[NIGHT] Umbrella V1 Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.UMBRELLAV1() end)
-menu.action(MODERATE_PLAYERS_LIST, "Crash Players", {}, "", NET.COMMAND.CRASH_PLAYERS)
+menu.action(MODERATE_PLAYERS_LIST, "Crash Players", {}, "Express Crash Targeted Players.", NET.COMMAND.CRASH_PLAYERS)
 menu.divider(MODERATE_PLAYERS_LIST, "Block Options") -- Block
 menu.toggle(MODERATE_PLAYERS_LIST, "Automatic Modders Removal", {"irondome"}, "Recommended to use when host.", function(Enabled) NET.VARIABLE.No_Modders_Session = Enabled end)
 menu.toggle(MODERATE_PLAYERS_LIST, "Block Modders From Joining", {""}, "Recommended to use when host.", function(Enabled) NET.VARIABLE.Block_Modders = Enabled end)
+
 local RECOVERY_PLAYERS_LIST = menu.list(ALL_PLAYERS_LIST, "Recovery")
 menu.toggle_loop(RECOVERY_PLAYERS_LIST, "RP Loop", {"rplobby"}, "Will level up players until level 120.", NET.COMMAND.GIVE_PLAYERS_RP)
 menu.toggle(RECOVERY_PLAYERS_LIST, "Freebies", {"bless"}, "Handout freebies.", NET.COMMAND.FREEBIES)
@@ -2439,7 +2490,9 @@ menu.action(TELEPORT_PLAYERS_LIST, "Teleport To Me", {}, "", NET.COMMAND.SUMMON_
 menu.action(TELEPORT_PLAYERS_LIST, "Teleport To My Waypoint", {}, "", NET.COMMAND.TELEPORT_PLAYERS_TO_WAYPOINT)
 menu.action(TELEPORT_PLAYERS_LIST, "Teleport To Casino", {}, "", NET.COMMAND.TELEPORT_PLAYERS_TO_CASINO)
 menu.toggle(ALL_PLAYERS_LIST, "Ghost Players", {}, "", function(Enabled) NET.COMMAND.GHOST_PLAYERS(Enabled) end)
+
 local SESSION_LIST = menu.list(menu.my_root(), "Session")
+
 local HOST_LIST = menu.list(SESSION_LIST, "Host Tools")
 menu.divider(HOST_LIST, "Host")
 menu.toggle_loop(HOST_LIST, "Host Addict", {}, "Automates the process of becoming host by calculating risks and giving you the best available session.", NET.COMMAND.HOST_ADDICT)
@@ -2447,17 +2500,41 @@ menu.action(HOST_LIST, "Become Host", {}, "", NET.COMMAND.BECOME_HOST)
 menu.divider(HOST_LIST, "Script Host")
 menu.toggle_loop(HOST_LIST, "Script Host Addict", {}, "Gatekeep script host with all of your might.", NET.COMMAND.BECOME_SCRIPT_HOST)
 menu.action(HOST_LIST, "Become Script Host", {""}, "", NET.COMMAND.BECOME_SCRIPT_HOST)
+
 CONSTRUCTOR_LIST = menu.list(SESSION_LIST, "Constructor") pcall(require("lib.net.Constructor"))
 menu.toggle(SESSION_LIST, "Chat Commands", {}, "Say ;help.", function(Enabled) NET.VARIABLE.Commands_Enabled = Enabled end)
 menu.toggle(SESSION_LIST, "Session Overlay", {}, "General information about the server.", function(Enabled) NET.COMMAND.SESSION_OVERLAY(Enabled) end)
 menu.action(SESSION_LIST, "Server Hop", {}, "", function() menu.trigger_commands("playermagnet 30") menu.trigger_commands("go public") end)
 menu.action(SESSION_LIST, "Rejoin", {}, "", function() menu.trigger_commands("rejoin") end)
+
 local UNSTUCK_LIST = menu.list(SESSION_LIST, "Unstuck", {}, "Every methods to get unstuck.")
 menu.action(UNSTUCK_LIST, "Abort Transition", {}, "", function() menu.trigger_commands("aborttransition") end)
 menu.action(UNSTUCK_LIST, "Unstuck", {}, "", function() menu.trigger_commands("unstuck") end)
 menu.action(UNSTUCK_LIST, "Quick Bail", {}, "", function() menu.trigger_commands("quickbail") end)
 menu.action(UNSTUCK_LIST, "Quit To SP", {}, "", function() menu.trigger_commands("quittosp") end)
 menu.action(UNSTUCK_LIST, "Force Quit To SP", {}, "", function() menu.trigger_commands("forcequittosp") end)
+
+local EXPERIMENTAL_LIST = menu.list(menu.my_root(), "Experimental")
+menu.toggle_loop(EXPERIMENTAL_LIST, "Always Boost", {}, "", function()
+    local Ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
+    local Vehicle = PED.GET_VEHICLE_PED_IS_USING(Ped)
+    NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(Vehicle)
+    if VEHICLE.GET_HAS_ROCKET_BOOST(Vehicle) then
+        VEHICLE.SET_SCRIPT_ROCKET_BOOST_RECHARGE_TIME(Vehicle, 0)
+        VEHICLE.SET_ROCKET_BOOST_ACTIVE(Vehicle, true)
+        VEHICLE.SET_ROCKET_BOOST_FILL(Vehicle, 100.0)
+    end
+end)
+menu.action(EXPERIMENTAL_LIST, "Speed Boost", {}, "kinda useless", function(Enabled)
+    VEHICLE.SET_VEHICLE_FORWARD_SPEED(PED.GET_VEHICLE_PED_IS_USING(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())), 500)
+end)
+menu.action(EXPERIMENTAL_LIST, "Lights", {}, "must test if networked", function(Enabled)
+    VEHICLE.SET_VEHICLE_LIGHT_MULTIPLIER(PED.GET_VEHICLE_PED_IS_USING(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())), 500)
+end)
+menu.toggle(EXPERIMENTAL_LIST, "Loud Radio", {}, "must test if networked", function(Enabled)
+    VEHICLE.SET_VEHICLE_RADIO_LOUD(PED.GET_VEHICLE_PED_IS_USING(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())), Enabled)
+end)
+
 menu.action(menu.my_root(), "Credits", {}, "Made by @getfev.\nScripts from JinxScript, Ryze, Night LUA & Addict Script.", function() return end)
 
 PLAYERS_COUNT = menu.divider(PLAYERS_LIST, "")
@@ -2499,7 +2576,7 @@ util.on_stop(function()
     NET = nil
 end)
 
-util.create_tick_handler(function() -- Move player stuff here instead of on_join & on_leave
+util.create_tick_handler(function()
     -- Menu stuff
     NET.FUNCTION.UPDATE_MENU()
     NET.FUNCTION.CHECK_FOR_2TAKE1()
@@ -2510,57 +2587,3 @@ util.create_tick_handler(function() -- Move player stuff here instead of on_join
 end) 
 
 util.keep_running()
-
--- Stuff im working on below.
-
-	-- Train models HAVE TO be loaded (requested) before you use this.
-	-- freight,freightcar,freightgrain,freightcont1,freightcont2,freighttrailer
-	--["CREATE_MISSION_TRAIN"]=--[[Vehicle (int)]] function(--[[int]] variation,--[[float]] x,--[[float]] y,--[[float]] z,--[[BOOL (bool)]] direction,--[[Any (int)]] p5,--[[Any (int)]] p6)
-
-    --["SET_VEHICLE_FORCE_AFTERBURNER"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] toggle)
-
-    --["SET_DISABLE_BMX_EXTRA_TRICK_FORCES"]=--[[void]] function(--[[Any (int)]] p0)
-
-    --["SET_BIKE_EASY_TO_LAND"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] toggle)
-
-    --["SET_SCRIPT_ROCKET_BOOST_RECHARGE_TIME"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[float]] seconds)
-    --["GET_HAS_ROCKET_BOOST"]=--[[BOOL (bool)]] function(--[[Vehicle (int)]] vehicle)
-    --["IS_ROCKET_BOOST_ACTIVE"]=--[[BOOL (bool)]] function(--[[Vehicle (int)]] vehicle)
-    --["SET_ROCKET_BOOST_ACTIVE"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] active)
-    --["SET_ROCKET_BOOST_FILL"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[float]] percentage)
-
-    --entities.get_all_vehicles_as_pointers()
-    --["GET_ALL_VEHICLES"]=--[[int]] function(--[[Any* (pointer)]] vehsStruct)
-
-    --["SET_DRIFT_TYRES"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] toggle)
-
-    --["SET_VEHICLE_ALLOW_HOMING_MISSLE_LOCKON_SYNCED"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] canBeLockedOn,--[[BOOL (bool)]] p2)
-
-    --["SET_GOON_BOSS_VEHICLE"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] toggle)
-
-    -- http://www.calculateme.com/Speed/MetersperSecond/ToMilesperHour.htm
-	--["SET_VEHICLE_FORWARD_SPEED"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[float]] speed)
-
-    	-- windowIndex:
-	-- 0 = Front Left Window
-	-- 1 = Front Right Window
-	-- 2 = Rear Left Window
-	-- 3 = Rear Right Window
-	-- 4 = Front Windscreen
-	-- 5 = Rear Windscreen
-	-- 6 = Mid Left
-	-- 7 = Mid Right
-	-- 8 = Invalid
-    --["ROLL_DOWN_WINDOW"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[int]] windowIndex)
-    --["ROLL_UP_WINDOW"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[int]] windowIndex)
-
-    --["SET_VEHICLE_ALARM"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] state)
-    --["START_VEHICLE_ALARM"]=--[[void]] function(--[[Vehicle (int)]] vehicle)
-
-    --["SET_VEHICLE_LIGHT_MULTIPLIER"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[float]] multiplier)
-
-    --["SET_TRAIN_SPEED"]=--[[void]] function(--[[Vehicle (int)]] train,--[[float]] speed)
-    --["SET_TRAIN_CRUISE_SPEED"]=--[[void]] function(--[[Vehicle (int)]] train,--[[float]] speed)
-
-    --["SET_VEHICLE_WILL_FORCE_OTHER_VEHICLES_TO_STOP"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] toggle)
-    --["SET_VEHICLE_ACT_AS_IF_HAS_SIREN_ON"]=--[[void]] function(--[[Vehicle (int)]] vehicle,--[[BOOL (bool)]] p1)
