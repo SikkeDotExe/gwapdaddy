@@ -13,26 +13,16 @@
 ]]
 
 --[[
-Version 1.5
-[+] Added Super Radar
-[+] Added Drift Tyres
-[+] Added Vehicle Windows Control
-[+] Added Passive Mode
-[+] Added Kill Player
-[~] Improved Backstab Kick
-[~] Improved Express Crash
-[~] Improved Chicken Crash
-[~] Improved Anti Spectate
-[~] Improved Anti Tow-Truck
-[~] Improved Playerlist
-[~] Fixed Express Crash
-[-] Removed Soup Crash
-[-] Removed Dynamite Crash
-[-] Removed Crash All Options (Default Express)
+Version 1.5a
+[+] Added Burger King Foot Lettuce Crash
+[+] Added Vehicular Manslaughter Crash
+[-] Removed Warhead Crash
+[-] Removed Aggressive Kick
+[-] Removed Blacklist Kick from Kick All
 ]]
 
 IN_DEV = false
-VERSION = "1.5"
+VERSION = "1.5a"
 
 -- Libraries
 util.require_natives(1676318796)
@@ -426,12 +416,6 @@ NET = {
                 {1, "[NET] Backstab"},
                 {2, "[STAND] Host"},
                 {3, "[HOST] Ban"},
-                {4, "[HOST] Blacklist"},
-            },
-            CRASH = {
-                {1, "[NET] Express"},
-                {2, "[NET] Dynamite"},
-                {3, "[STAND] Elegant"},
             },
         },
 
@@ -1062,10 +1046,6 @@ NET = {
                 NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {268435456, 78335916, 0, 0})
             end,
 
-            AGGRESSIVE = function(player_id)
-                NET.FUNCTION.KICK_PLAYER(player_id)
-            end,
-
             WRATH = function(player_id)
                 local HostName = players.get_name(players.get_host())
                 local TargetName = players.get_name(player_id)
@@ -1303,18 +1283,6 @@ NET = {
                     ENTITY.SET_ENTITY_COORDS_NO_OFFSET(SelfPlayerPed, PreviousPlayerPos.x, PreviousPlayerPos.y, PreviousPlayerPos.z, false, true, true)
                 end,
             },
-
-            ["2TAKE1"] = function(player_id) -- (T9) (S3) (NB)
-                NET.FUNCTION.CRASH_PLAYER(player_id)
-            end,
-
-            WARHEAD = function(player_id) -- (N4)
-                local TargetName = players.get_name(player_id)
-                menu.trigger_commands("footlettuce"..TargetName)
-                if players.get_vehicle_model(player_id) then
-                    menu.trigger_commands("slaughter"..TargetName)
-                end
-            end,
 
             MORTAR = function(player_id) -- (XF) Crash Objects
                 for next = 1, #NET.TABLE.CRASH_OBJECT do
@@ -1892,8 +1860,6 @@ NET = {
                         menu.trigger_commands("hostkick"..PlayerName)
                     elseif NET.VARIABLE.Kick_Method == 3 then -- Ban / "Player has been removed for cheating"
                         menu.trigger_commands("ban"..PlayerName)
-                    elseif NET.VARIABLE.Kick_Method == 4 then -- Desync Kick
-                        menu.trigger_commands("blacklist"..PlayerName)
                     end
                 end
         
@@ -2314,7 +2280,6 @@ NET = {
         local MODERATE_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Moderate")
         local KICK_OPTIONS = menu.list(MODERATE_LIST, "Kicks")
         menu.action(KICK_OPTIONS, "[STAND] Wrath Kick", {"wkick"}, "Will try to get host to kick target if available. If not, will fallback onto Aggressive Kick.", function() NET.COMMAND.KICK.WRATH(player_id) end)
-        menu.action(KICK_OPTIONS, "[STAND] Aggressive Kick", {"akick"}, "Unblockable if target isn't host & detected as a threat.", function() NET.COMMAND.KICK.AGGRESSIVE(player_id) end)
         menu.action(KICK_OPTIONS, "[STAND] Love Letter Kick", {}, "Discrete and unblockable.\nCannot be used against host.\nUnblockable when you are host.", function() menu.trigger_commands("loveletterkick"..players.get_name(player_id)) end)
         menu.action(KICK_OPTIONS, "[STAND] Host Kick", {}, "Very effective against modders with protections.\nUnblockable when you are host.", function() menu.trigger_commands("hostkick"..players.get_name(player_id)) end)
         menu.action(KICK_OPTIONS, "[NET] Airstrike Kick", {"airkick"}, "Blocked by popular menus.", function() NET.COMMAND.KICK.AIRSTRIKE(player_id) end)
@@ -2322,8 +2287,9 @@ NET = {
         menu.action(KICK_OPTIONS, "[ADDICT] Eviction Notice", {"ekick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.EVICTION_NOTICE(player_id) end)
         menu.action(KICK_OPTIONS, "[STAND] Pool's Closed Kick", {}, "Blocked by popular menus.", function() menu.trigger_commands("aids"..players.get_name(player_id)) end)
         local CRASH_OPTIONS = menu.list(MODERATE_LIST, "Crashes")
-        menu.action(CRASH_OPTIONS, "[STAND] 2Take1 Crash", {"2t1crash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH["2TAKE1"](player_id) end)
-        menu.action(CRASH_OPTIONS, "[STAND] Warhead Crash", {"warcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.WARHEAD(player_id) end)
+        menu.action(CRASH_OPTIONS, "[STAND] 2Take1 Crash", {"2t1crash"}, "Blocked by most menus.", function() menu.trigger_commands("steamroll"..players.get_name(player_id)) end)
+        menu.action(CRASH_OPTIONS, "[STAND] Burger King Foot Lettuce", {}, "Blocked by most menus.", function() menu.trigger_commands("footlettuce"..players.get_name(player_id)) end)
+        menu.action(CRASH_OPTIONS, "[STAND] Vehicular Manslaughter", {}, "Blocked by most menus.\nTarget must be in a vehicle.", function() menu.trigger_commands("slaughter"..players.get_name(player_id)) end)
         menu.action(CRASH_OPTIONS, "[NET] Express Crash", {"xpresscrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.EXPRESS(player_id) end)
         menu.action(CRASH_OPTIONS, "[NET] Mortar Crash", {"mortarcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.MORTAR(player_id) end)
         menu.action(CRASH_OPTIONS, "[NET] Chicken Crash", {"hencrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.CHICKEN(player_id) end)
