@@ -2413,7 +2413,7 @@ menu.toggle_loop(VEHICLE_LIST, "Vehicle Rocket Aimbot", {}, "", NET.COMMAND.VEH_
 menu.toggle_loop(VEHICLE_LIST,"Rainbow Headlights", {""}, "", function(Enabled) NET.COMMAND.RAINBOW_HEADLIGHTS(Enabled) end)
 menu.toggle(VEHICLE_LIST,"Rainbow Neons", {""}, "", function(Enabled) NET.COMMAND.RAINBOW_NEONS(Enabled) end)
 menu.toggle(VEHICLE_LIST, "Drift Tyres", {}, "", function(Enabled) VEHICLE.SET_DRIFT_TYRES(PED.GET_VEHICLE_PED_IS_USING(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())), Enabled) end)
-menu.toggle(EXPERIMENTAL_LIST, "Loud Radio", {}, "Not sure this is networked.", function(Enabled) AUDIO.SET_VEHICLE_RADIO_LOUD(PED.GET_VEHICLE_PED_IS_USING(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())), Enabled) end)
+menu.toggle(VEHICLE_LIST, "Loud Radio", {}, "Not sure this is networked.", function(Enabled) AUDIO.SET_VEHICLE_RADIO_LOUD(PED.GET_VEHICLE_PED_IS_USING(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())), Enabled) end)
 
 local VEHICLE_WINDOWS_LIST = menu.list(VEHICLE_LIST, "Vehicle Windows")
 menu.list_action(VEHICLE_WINDOWS_LIST, "Roll Up Window", {}, "", {"Left Front", "Right Front", "Left Back", "Right Back"}, function(Option) VEHICLE.ROLL_UP_WINDOW(PED.GET_VEHICLE_PED_IS_USING(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())), Option-1) end)
