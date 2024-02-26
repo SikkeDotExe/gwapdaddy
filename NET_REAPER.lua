@@ -22,7 +22,7 @@ Version 1.6
 [-] Removed Eviction Notice Kick
 ]]
 
-IN_DEV = true
+IN_DEV = false
 VERSION = "1.6"
 
 -- Libraries
