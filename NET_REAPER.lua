@@ -13,17 +13,21 @@
 ]]
 
 --[[
-Version 1.6
-[+] Added Orgasm Kick
-[+] Added Kill All
-[+] Added Loud Radio
-[+] Improved Backstab Kick
-[+] Improved Airstrike Kick
-[-] Removed Eviction Notice Kick
+Version 1.7
+[+] Fixed Moonstar Crash
+[+] Improved Airstrike Kick / Now Script Kick
+[+] Improved Chicken Crash
+[-] Removed Backstab Kick
+[-] Removed Orgasm Kick
+[-] Removed Lamp Crash
+[-] Removed Chinese Crash
+[-] Removed Phantom Crash
+[-] Removed Task Crash
+[-] Removed Jesus Crash
 ]]
 
 IN_DEV = false
-VERSION = "1.6"
+VERSION = "1.7"
 
 -- Libraries
 util.require_natives(1676318796)
@@ -414,7 +418,7 @@ NET = {
                 {4, "Plebs"},
             },
             KICK = {
-                {1, "[NET] Backstab"},
+                {1, "[NET] Script"},
                 {2, "[STAND] Host"},
                 {3, "[HOST] Ban"},
             },
@@ -933,29 +937,47 @@ NET = {
             end
             NET.FUNCTION.SHOOT_EVENT(player_id, Type, NET.TABLE.FLAG.DF_IsAccurate | NET.TABLE.FLAG.DF_IgnorePedFlags | NET.TABLE.FLAG.DF_SuppressImpactAudio | NET.TABLE.FLAG.DF_IgnoreRemoteDistCheck)
         end,
+
+        TELEPORT_PLAYER_TO = function(player_id, position)
+            local Ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
+            if not PED.IS_PED_IN_ANY_VEHICLE(Ped) then
+                util.toast("Player must be in a vehicle. OR You can use Stand's Teleport.")
+            else -- THIS WORKS | Repeat until ped position = position?
+                local TpVehicle = PED.GET_VEHICLE_PED_IS_USING(Ped)
+                for next = 1, 10 do
+                    NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(TpVehicle)
+                    ENTITY.SET_ENTITY_COORDS_NO_OFFSET(TpVehicle, position.x, position.y, position.z, false, false, false)
+                    util.yield(100)
+                end
+                entities.delete_by_handle(TpVehicle)
+            end
+        end,
+
+        TELEPORT_TO = function(player_id, x, y, z)
+            local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
+            if player_id then
+                local position = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id))
+                ENTITY.SET_ENTITY_COORDS_NO_OFFSET(ped, position.x, position.y, position.z, false, false, false)
+            else
+                ENTITY.SET_ENTITY_COORDS_NO_OFFSET(ped, x, y, z, false, false, false)
+            end
+        end,
+
+        GET_BLIP_POSITION = function()
+            local BlipCoords = HUD.GET_BLIP_INFO_ID_COORD(HUD.GET_FIRST_BLIP_INFO_ID(HUD.GET_WAYPOINT_BLIP_ENUM_ID()))
+            local ground = false
+            repeat ground, BlipCoords.z = util.get_ground_z(BlipCoords.x, BlipCoords.y) util.yield() until ground
+
+            return BlipCoords
+        end,
     },
 
     COMMAND = {
 
         KICK = {
-            BACKSTAB = function(player_id) -- Net Exclusive (S0)
-                for next = 1, 5 do
-                    NET.FUNCTION.FIRE_EVENT(968269233, player_id, {players.user(), 4, math.random(25, 100), 1, 1, 1}) -- Unique
-                end
-            end,
-
-            ORGASM = function(player_id) -- Net Exclusive (MS3) (MS8)
+            SCRIPT = function(player_id) -- (S0) (S1) (S2) (S3) (S4) (S5) (MS3) (MS8)
                 menu.trigger_commands("givesh"..players.get_name(player_id))
-                for next = 1, 15 do
-                    local Random = math.random(-2147483647, 2147483647)
-                    -- MS3
-                    NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {Random, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-                    -- MS8
-                    NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {Random, 78335916, 0, 0})
-                end
-            end,
 
-            AIRSTRIKE = function(player_id) -- (S0) (S1) (S2) (S3) (S4) (S5)
                 local Random = math.random(-2147483647, 2147483647)
                 --S0 - Works
                 NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {Random})
@@ -1044,8 +1066,10 @@ NET = {
                     NET.FUNCTION.FIRE_EVENT(1613825825, player_id, {20, 1, -1, -1, -1, -1})
                     -- Doesn't fire a detection on Stand.
                     NET.FUNCTION.FIRE_EVENT(1017995959, player_id, {27, 0})
+                    -- Backstab (S0)
+                    NET.FUNCTION.FIRE_EVENT(968269233, player_id, {players.user(), 4, math.random(25, 100), 1, 1, 1}) -- Unique
                     --S1 - May not work () Tested w/ and w/o SH | Is Detected, Doesn't Kick
-                    NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {Random, 2128065066})
+                    NET.FUNCTION.FIRE_EVENT(-901348601, player_id, {Random})
                     --S2 - May not work () Tested w/ and w/o SH | Is Detected, Doesn't Kick
                     NET.FUNCTION.FIRE_EVENT(-445044249, player_id, {Random, 28, -1, -1})
                     NET.FUNCTION.FIRE_EVENT(446749111, player_id, {Random, 215802216, 0})
@@ -1057,6 +1081,9 @@ NET = {
                     NET.FUNCTION.FIRE_EVENT(-2026172248, player_id, {Random, 0, 0, 0, 1})
                     -- Mailbomb (S5) - Works
                     NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {67108864, 122, 1})
+                    -- Orgasm (MS3) (MS8)
+                    NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {Random, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                    NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {Random, 78335916, 0, 0})
                 end
             end,
 
@@ -1114,7 +1141,6 @@ NET = {
                 end,
 
                 MOONSTAR = function() -- Night
-                    menu.trigger_commands("anticrashcam on")
                     local user = players.user()
                     local user_ped = players.user_ped()
                     local pos = players.get_position(user)
@@ -1136,16 +1162,12 @@ NET = {
                     WEAPON.GIVE_DELAYED_WEAPON_TO_PED(user_ped, 0xFBAB5776, 100, false)
                     PLAYER.CLEAR_PLAYER_PARACHUTE_PACK_MODEL_OVERRIDE(user)
                     util.yield(1000)
-                    for i = 1, 5 do
-                        util.spoof_script("freemode", SYSTEM.util.yield)
-                    end
                     ENTITY.SET_ENTITY_HEALTH(user_ped, 0)
                     NETWORK.NETWORK_RESURRECT_LOCAL_PLAYER(pos.x,pos.y,pos.z, 0, false, false, 0)
                     util.yield(2500)
                     entities.delete_by_handle(cargobob)
                     entities.delete_by_handle(veh)
                     PHYSICS.DELETE_CHILD_ROPE(newRope)
-                    menu.trigger_commands("anticrashcam off")
                 end,
 
                 ROPE = function() -- Night
@@ -1298,6 +1320,23 @@ NET = {
                 end,
             },
 
+            EXPRESS = function(player_id) -- (NB) (S3) (S2)
+                -- Express / Elegant (NB)
+                NET.FUNCTION.SHOOT_EVENT(player_id, 0xFF956666, NET.TABLE.FLAG.DF_IgnoreRemoteDistCheck)
+
+                -- (S3)
+                for next = 1, 5 do
+                    NET.FUNCTION.FIRE_EVENT(-375628860, player_id, {1, math.random(-2147483647, 2147483647)})
+                end
+
+                --Dynamite (S2)
+                menu.trigger_commands("givesh"..players.get_name(player_id))
+                NET.FUNCTION.FIRE_EVENT(2067191610, player_id, {0, 0, -12988, -99097, 0})
+                NET.FUNCTION.FIRE_EVENT(323285304, player_id, {0, 0, -12988, -99097, 0})
+                NET.FUNCTION.FIRE_EVENT(495813132, player_id, {0, 0, -12988, -99097, 0})
+                NET.FUNCTION.FIRE_EVENT(323285304, player_id, {323285304, 64, 2139114019, 14299, 40016, 11434, 4595, 25992})
+            end,
+
             MORTAR = function(player_id) -- (XF) Crash Objects
                 for next = 1, #NET.TABLE.CRASH_OBJECT do
                     if players.exists(player_id) then
@@ -1312,28 +1351,25 @@ NET = {
                 end
             end,
 
-            EXPRESS = function(player_id) -- (NB) (S3) (S2)
-                -- Express / Elegant (NB) (S3)
-                NET.FUNCTION.SHOOT_EVENT(player_id, 0xFF956666, NET.TABLE.FLAG.DF_IgnoreRemoteDistCheck)
-                for next = 1, 5 do NET.FUNCTION.FIRE_EVENT(-375628860, player_id, {1, math.random(-2147483647, 2147483647)}) end
-
-                --Dynamite (S2)
-                menu.trigger_commands("givesh"..players.get_name(player_id))
-                NET.FUNCTION.FIRE_EVENT(2067191610, player_id, {0, 0, -12988, -99097, 0})
-                NET.FUNCTION.FIRE_EVENT(323285304, player_id, {0, 0, -12988, -99097, 0})
-                NET.FUNCTION.FIRE_EVENT(495813132, player_id, {0, 0, -12988, -99097, 0})
-                NET.FUNCTION.FIRE_EVENT(323285304, player_id, {323285304, 64, 2139114019, 14299, 40016, 11434, 4595, 25992})
-            end,
-
-            CHICKEN = function(player_id) -- (X9) (XA)
+            CHICKEN = function(player_id) -- (X8) (X9) (XA) (XM) (XJ)
+                local ped_task = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED(player_id))
                 local chicken_model = util.joaat("A_C_HEN") or 1794449327
                 util.request_model(chicken_model)
+                local mdl = util.joaat("cs_taostranslator2")
+                util.request_model(mdl)
+                local ruiner = util.joaat("Ruiner2")
+                util.request_model(ruiner)
+                local kaylee = util.joaat("ig_kaylee")
+                util.request_model(kaylee)
                 util.request_model(-1011537562)
                 util.request_model(-541762431)
+                util.request_model(0x9cf21e0f)
+
                 local pos = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id))
                 local chicken = entities.create_ped(28, chicken_model, pos, 0)
                 local PED1  = entities.create_ped(28,-1011537562,pos,0)
                 local PED2  = entities.create_ped(28,-541762431,pos,0)
+
                 WEAPON.GIVE_WEAPON_TO_PED(chicken, -1813897027, 1, true, true)
                 WEAPON.GIVE_WEAPON_TO_PED(PED1,-1813897027,1,true,true)
                 WEAPON.GIVE_WEAPON_TO_PED(PED2,-1813897027,1,true,true)
@@ -1341,79 +1377,16 @@ NET = {
                 TASK.TASK_THROW_PROJECTILE(chicken, pos.x, pos.y, pos.z, 0, 0)
                 TASK.TASK_THROW_PROJECTILE(PED1,pos.x,pos.y,pos.z,0,0)
                 TASK.TASK_THROW_PROJECTILE(PED2,pos.x,pos.y,pos.z,0,0)
-                util.yield(5000)
-                entities.delete(chicken)
-                entities.delete(PED1)
-                entities.delete(PED2)
-            end,
-
-            -- Night
-            PHANTOM = function(player_id) -- (XM) (A0:221) (A0:205) (A0:38) (A0:445) (A0:238) (A0:241) (A0:218)
-                local player = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
-                local veh = entities.get_all_vehicles_as_handles()
-                for i = 1, #veh do
-                    NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(veh[i])
-                    ENTITY.SET_ENTITY_COORDS_NO_OFFSET(veh[i], 0, 0, 5)
-                    TASK.TASK_VEHICLE_TEMP_ACTION(player, veh[i], 18, 777)
-                    TASK.TASK_VEHICLE_TEMP_ACTION(player, veh[i], 17, 888)
-                    TASK.TASK_VEHICLE_TEMP_ACTION(player, veh[i], 16, 999)
-                end
-                local ped_task = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED(player_id))
-                ENTITY.FREEZE_ENTITY_POSITION(PLAYER.GET_PLAYER_PED(player_id), true)
-                entities.create_object(0x9cf21e0f , ped_task, true, false) 
-                local Rui_task = NET.FUNCTION.SPAWN_VEHICLE(util.joaat("Ruiner2"), ped_task, ENTITY.GET_ENTITY_HEADING(TTPed), true)
-                local ped_task2 = entities.create_ped(26 , util.joaat("ig_kaylee"), ped_task, 0)
-                for i = 0, 10 do
-                    local pedps = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED(player_id))
-                    local allpeds = entities.get_all_peds_as_handles()
-                    local allvehicles = entities.get_all_vehicles_as_handles()
-                    local allobjects = entities.get_all_objects_as_handles()
-                    local ownped = players.user_ped(players.user())
-                    local models = {0x78BC1A3C, 0x000B75B9, 0x15F27762, 0x0E512E79}
-                    local vehicles = {0xD6BC7523, 0x1F3D44B5, 0x2A72BEAB, 0x174CB172, 0x78BC1A3C, 0x0E512E79}
-                    for next = 1, #models do
-                        util.request_model(models[next])
-                    end
-                    for next = 1, #vehicles do
-                        NET.FUNCTION.SPAWN_VEHICLE(vehicles[next], pedps, 0)
-                    end
-                    for i = 1, #allpeds do
-                        if allpeds[i] ~= ownped then
-                            ENTITY.SET_ENTITY_COORDS_NO_OFFSET(allpeds[i], 0, 0, 0)
-                        end
-                    end
-                    for i = 1, #allvehicles do
-                        if allvehicles[i] ~= ownvehicle then
-                            ENTITY.SET_ENTITY_COORDS_NO_OFFSET(allvehicles[i], 0, 0, 0)
-                            VEHICLE.SET_VEHICLE_ON_GROUND_PROPERLY(allvehicles[i], 0, 0, 0)
-                            VEHICLE.SET_TAXI_LIGHTS(allvehicles[i])
-                        end
-                    end
-                    for i = 1, #allobjects do
-                        ENTITY.SET_ENTITY_COORDS_NO_OFFSET(allobjects[i], 0, 0, 0)
-                    end
-                    util.yield()
-                end
-                PED.RESURRECT_PED(players.user_ped(player_id))
-                util.yield(2000)
-                entities.delete_by_handle(Rui_task)
-                entities.delete_by_handle(ped_task2)
-            end,
-
-            -- Ryze
-            CHINESE = function(player_id) -- (X8) (X9)
-                local player = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
-                local mdl = util.joaat("cs_taostranslator2")
-                while not STREAMING.HAS_MODEL_LOADED(mdl) do
-                    STREAMING.REQUEST_MODEL(mdl)
-                    util.yield(5)
-                end
-        
+                NET.FUNCTION.BLOCK_SYNCS(player_id, function()
+                    local object = entities.create_object(util.joaat("prop_fragtest_cnst_04"), ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)))
+                    OBJECT.BREAK_OBJECT_FRAGMENT_CHILD(object, 1, false)
+                    util.yield(1000)
+                    entities.delete_by_handle(object)
+                end)
                 local ped = {}
                 for i = 1, 10 do 
-                    local coord = ENTITY.GET_ENTITY_COORDS(player, true)
                     local pedcoord = ENTITY.GET_ENTITY_COORDS(ped[i], false)
-                    ped[i] = entities.create_ped(0, mdl, coord, 0)
+                    ped[i] = entities.create_ped(0, mdl, pos, 0)
         
                     WEAPON.GIVE_DELAYED_WEAPON_TO_PED(ped[i], 0xB1CA77B1, 0, true)
                     WEAPON.SET_PED_GADGET(ped[i], 0xB1CA77B1, true)
@@ -1424,61 +1397,21 @@ NET = {
                     FIRE.ADD_EXPLOSION(pos.x, pos.y, pos.z, 3, 10.0, false, true, 1.0, false, false)
                     util.yield(25)
                 end
-                util.yield(2500)
+
+                entities.create_object(0x9cf21e0f , ped_task, true, false) 
+                local Rui_task = NET.FUNCTION.SPAWN_VEHICLE(ruiner, ped_task, ENTITY.GET_ENTITY_HEADING(TTPed), true)
+                local ped_task2 = entities.create_ped(26 , kaylee, ped_task, 0)
+
+                util.yield(5000)
+                entities.delete(chicken)
+                entities.delete(PED1)
+                entities.delete(PED2)
+                entities.delete_by_handle(Rui_task)
+                entities.delete_by_handle(ped_task2)
                 for i = 1, 10 do
                     entities.delete_by_handle(ped[i])
                     util.yield(25)
                 end
-            end,
-
-            JESUS = function(player_id) -- (A2:456)
-                local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
-                local pos = players.get_position(player_id)
-                local mdl = util.joaat("u_m_m_jesus_01")
-                local veh_mdl = util.joaat("oppressor")
-                util.request_model(veh_mdl)
-                util.request_model(mdl)
-                    for i = 1, 10 do
-                        if not players.exists(player_id) then
-                            return
-                        end
-                        local veh = entities.create_vehicle(veh_mdl, pos, 0)
-                        local jesus = entities.create_ped(2, mdl, pos, 0)
-                        PED.SET_PED_INTO_VEHICLE(jesus, veh, -1)
-                        util.yield(100)
-                        TASK.TASK_VEHICLE_HELI_PROTECT(jesus, veh, ped, 10.0, 0, 10, 0, 0)
-                        util.yield(1000)
-                        entities.delete_by_handle(jesus)
-                        entities.delete_by_handle(veh)
-                    end
-                STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(mdl)
-                STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(veh_mdl)
-            end,
-
-            LAMP = function(player_id) -- (XJ)
-                NET.FUNCTION.BLOCK_SYNCS(player_id, function()
-                    local object = entities.create_object(util.joaat("prop_fragtest_cnst_04"), ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)))
-                    OBJECT.BREAK_OBJECT_FRAGMENT_CHILD(object, 1, false)
-                    util.yield(1000)
-                    entities.delete_by_handle(object)
-                end)
-            end,
-
-            TASK = function(player_id) -- (A0:57)
-                local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
-                local user = PLAYER.GET_PLAYER_PED(players.user())
-                local pos = ENTITY.GET_ENTITY_COORDS(ped)
-                local my_pos = ENTITY.GET_ENTITY_COORDS(user)
-                local anim_dict = ("anim@mp_player_intupperstinker")
-                STREAMING.REQUEST_ANIM_DICT(anim_dict)
-                NET.FUNCTION.BLOCK_SYNCS(player_id, function()
-                    ENTITY.SET_ENTITY_COORDS_NO_OFFSET(user, pos.x, pos.y, pos.z, false, false, false)
-                    util.yield(100)
-                    TASK.TASK_SWEEP_AIM_POSITION(user, anim_dict, "take that", "stupid", "fish", -1, 0.0, 0.0, 0.0, 0.0, 0.0)
-                    util.yield(100)
-                end)
-                TASK.CLEAR_PED_TASKS_IMMEDIATELY(user)
-                ENTITY.SET_ENTITY_COORDS_NO_OFFSET(user, my_pos.x, my_pos.y, my_pos.z, false, false, false)
             end,
         },
 
@@ -1726,6 +1659,7 @@ NET = {
                         local Current_Host = players.get_host()
                         if NET.VARIABLE.Host_Addict_Kick_Cooldown == 15 then
                             if players.exists(Current_Host) then
+                                util.toast("Removing player..")
                                 NET.FUNCTION.KICK_PLAYER(Current_Host)
                             else
                                 NET.VARIABLE.Host_Addict_Kick_Cooldown = 0
@@ -1868,8 +1802,8 @@ NET = {
             for next = 1, #ToKick do
                 if players.exists(ToKick[next]) then
                     local PlayerName = players.get_name(ToKick[next])
-                    if NET.VARIABLE.Kick_Method == 1 then -- Backstab / (S0)
-                        NET.COMMAND.KICK.BACKSTAB(ToKick[next])
+                    if NET.VARIABLE.Kick_Method == 1 then -- Airstrike
+                        NET.COMMAND.KICK.SCRIPT(ToKick[next])
                     elseif NET.VARIABLE.Kick_Method == 2 then -- Host Kick / Votekick
                         menu.trigger_commands("hostkick"..PlayerName)
                     elseif NET.VARIABLE.Kick_Method == 3 then -- Ban / "Player has been removed for cheating"
@@ -2267,6 +2201,31 @@ NET = {
             GRAPHICS.START_NETWORKED_PARTICLE_FX_NON_LOOPED_AT_COORD(ptfx, player_pos.x, player_pos.y, player_pos.z, 0, 0, 0, 2.5, false, false, false)
             util.yield(200)
         end,
+
+        TELEPORT_INTO_PLAYER_VEHICLE = function(player_id)
+            local TargetPed = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
+            if PED.IS_PED_IN_ANY_VEHICLE(TargetPed) then
+                local Ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
+                local Vehicle = PED.GET_VEHICLE_PED_IS_USING(TargetPed)
+                local EntityVehicle = ENTITY.GET_ENTITY_MODEL(Vehicle)
+                local Seats = VEHICLE.GET_VEHICLE_MODEL_NUMBER_OF_SEATS(EntityVehicle)
+
+                if Seats == 1 then
+                    util.toast("Vehicle has only 1 seat.")
+                    return
+                end
+
+                for Seat = -1, Seats - 1 do
+                    if VEHICLE.IS_VEHICLE_SEAT_FREE(Vehicle, Seat) then
+                        NET.FUNCTION.TELEPORT_TO(player_id)
+                        PED.SET_PED_INTO_VEHICLE(Ped, Vehicle, Seat)
+                        return
+                    end
+                end
+            else
+                util.toast("Player is not in a vehicle.")
+            end
+        end,
     },
 
     PROFILE = {}, -- Menu Profiles
@@ -2309,29 +2268,20 @@ NET = {
         menu.action(KICK_OPTIONS, "[STAND] Love Letter", {}, "Discrete and unblockable.\nCannot be used against host.", function() menu.trigger_commands("loveletterkick"..players.get_name(player_id)) end)
         menu.action(KICK_OPTIONS, "[STAND] Host Kick", {}, "Unblockable unless agaisnt host.", function() menu.trigger_commands("hostkick"..players.get_name(player_id)) end)
         menu.action(KICK_OPTIONS, "[STAND] Pool's Closed", {}, "Blocked by popular menus.", function() menu.trigger_commands("aids"..players.get_name(player_id)) end)
-        menu.action(KICK_OPTIONS, "[NET] Orgasm Kick", {"moan"}, "Blocked by popular menus.", function() NET.COMMAND.KICK.ORGASM(player_id) end)
-        menu.action(KICK_OPTIONS, "[NET] Backstab Kick", {"stab"}, "Blocked by most menus.", function() NET.COMMAND.KICK.BACKSTAB(player_id) end)
-        menu.action(KICK_OPTIONS, "[NET] Airstrike Kick", {"airstrike"}, "Blocked by most menus.", function() NET.COMMAND.KICK.AIRSTRIKE(player_id) end)
+        menu.action(KICK_OPTIONS, "[NET] Script Kick", {"scriptkick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.SCRIPT(player_id) end)
         local CRASH_OPTIONS = menu.list(MODERATE_LIST, "Crashes")
-        menu.divider(CRASH_OPTIONS, "Recommended")
         menu.action(CRASH_OPTIONS, "[NET] Express Crash", {"xpresscrash"}, "Blocked by popular menus.", function() NET.COMMAND.CRASH.EXPRESS(player_id) end)
         menu.action(CRASH_OPTIONS, "[STAND] Burger King Foot Lettuce", {}, "Blocked by most menus.", function() menu.trigger_commands("footlettuce"..players.get_name(player_id)) end)
         menu.action(CRASH_OPTIONS, "[STAND] Vehicular Manslaughter", {}, "Blocked by most menus.\nTarget must be in a vehicle.", function() menu.trigger_commands("slaughter"..players.get_name(player_id)) end)
-        menu.divider(CRASH_OPTIONS, "Object Crashes")
-        menu.action(CRASH_OPTIONS, "[STAND] Steamroller", {}, "Blocked by most menus.", function() menu.trigger_commands("steamroll"..players.get_name(player_id)) end)
-        menu.action(CRASH_OPTIONS, "[NET] Mortar Crash", {"mortarcrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.MORTAR(player_id) end)
-        menu.action(CRASH_OPTIONS, "[NET] Chicken Crash", {"hencrash"}, "Blocked by most menus.", function() NET.COMMAND.CRASH.CHICKEN(player_id) end)
-        menu.action(CRASH_OPTIONS, "[NIGHT] Phantom Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.PHANTOM(player_id) end)
-        menu.action(CRASH_OPTIONS, "[RYZE] Chinese Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.CHINESE(player_id) end)
-        menu.action(CRASH_OPTIONS, "[RYZE] Jesus Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.JESUS(player_id) end)
-        menu.action(CRASH_OPTIONS, "[RYZE] Lamp Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.LAMP(player_id) end)
-        menu.action(CRASH_OPTIONS, "[RYZE] Task Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.TASK(player_id) end)
+        menu.action(CRASH_OPTIONS, "[STAND] Steamroller", {}, "Blocked by most menus.\nDon't be close, this crash will affect everyone near the target.", function() menu.trigger_commands("steamroll"..players.get_name(player_id)) end)
+        menu.action(CRASH_OPTIONS, "[NET] Mortar Crash", {"mortarcrash"}, "Blocked by most menus.\nDon't be close, this crash will affect everyone near the target.", function() NET.COMMAND.CRASH.MORTAR(player_id) end)
+        menu.action(CRASH_OPTIONS, "[NET] Chicken Crash", {"hencrash"}, "Blocked by most menus.\nDon't be close, this crash will affect everyone near the target.", function() NET.COMMAND.CRASH.CHICKEN(player_id) end)
         local TROLLING_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Trolling")
-        menu.toggle_loop(TROLLING_LIST, "Kill", {}, "You will always be blamed, but this is super reliable.\nWorks for players in interior.", function() NET.FUNCTION.KILL_PLAYER(player_id) end)
-        menu.toggle_loop(TROLLING_LIST, "Smokescreen", {}, "Fills up their screen with black smoke.", function() NET.COMMAND.SMOKESCREEN_PLAYER(player_id) end, function() local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id) GRAPHICS.REMOVE_PARTICLE_FX(ptfx) STREAMING.REMOVE_NAMED_PTFX_ASSET("scr_as_trans") end)
-        menu.toggle_loop(TROLLING_LIST, "Launch Player", {}, "", function() NET.COMMAND.LAUNCH_PLAYER(player_id) end, function() if veh ~= 0 and ENTITY.DOES_ENTITY_EXIST(veh) then entities.delete(veh) end end)
-        menu.toggle_loop(TROLLING_LIST, "Stumble Player", {}, "", function() NET.COMMAND.STUMBLE_PLAYER(player_id) end)
-        local PROP_GLITCH_LIST = menu.list(TROLLING_LIST, "Prop Glitch Loop")
+        menu.toggle_loop(TROLLING_LIST, "Kill", {}, "You will always be blamed.\nWorks for players in interior.", function() NET.FUNCTION.KILL_PLAYER(player_id) end)
+        menu.toggle_loop(TROLLING_LIST, "Smokescreen", {}, "Blocked by popular menus.", function() NET.COMMAND.SMOKESCREEN_PLAYER(player_id) end, function() local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id) GRAPHICS.REMOVE_PARTICLE_FX(ptfx) STREAMING.REMOVE_NAMED_PTFX_ASSET("scr_as_trans") end)
+        menu.toggle_loop(TROLLING_LIST, "Launch Player", {}, "Blocked by popular menus.", function() NET.COMMAND.LAUNCH_PLAYER(player_id) end, function() if veh ~= 0 and ENTITY.DOES_ENTITY_EXIST(veh) then entities.delete(veh) end end)
+        menu.toggle_loop(TROLLING_LIST, "Stumble Player", {}, "Blocked by popular menus.", function() NET.COMMAND.STUMBLE_PLAYER(player_id) end)
+        local PROP_GLITCH_LIST = menu.list(TROLLING_LIST, "Prop Glitch Loop", {}, "Blocked by popular menus.")
         menu.list_select(PROP_GLITCH_LIST, "Object", {}, "Object to glitch the player.", NET.TABLE.GLITCH_OBJECT.NAME, 1, function(index) NET.VARIABLE.Object_Hash = util.joaat(NET.TABLE.GLITCH_OBJECT.OBJECT[index]) end)
         menu.slider(PROP_GLITCH_LIST, "Spawn delay", {}, "", 0, 3000, 50, 10, function(amount) delay = amount end)
         menu.toggle(PROP_GLITCH_LIST, "Glitch player", {}, "", function(toggled) NET.COMMAND.GLITCH_PLAYER(player_id, toggled) end)
@@ -2350,9 +2300,10 @@ NET = {
         menu.action(FRIENDLY_LIST, "Fix Loading Screen", {"fix"}, "Useful when stuck in a loading screen.", function() NET.COMMAND.FIX_LOADING_SCREEN(player_id) end)
         menu.action(FRIENDLY_LIST, "Reduce Loading Time", {}, "Attempts to help the player by giving them script host.", function() NET.COMMAND.GIVE_SCRIPT_HOST(player_id) end)
         local TELEPORT_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Teleport")
-        menu.action(TELEPORT_LIST, "Goto", {}, "", function() menu.trigger_commands("tp"..players.get_name(player_id)) end)
-        menu.action(TELEPORT_LIST, "Bring", {""}, "", function() menu.trigger_commands("summon"..players.get_name(player_id)) end)
-        menu.action(TELEPORT_LIST, "Teleport Into Their Vehicle", {}, "", function() menu.trigger_commands("tpveh"..players.get_name(player_id)) end)
+        menu.action(TELEPORT_LIST , "Teleport To Me", {}, "Blocked by most menus.\nPlayer must be in a vehicle.", function() NET.FUNCTION.TELEPORT_PLAYER_TO(player_id, ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()))) end)
+        menu.action(TELEPORT_LIST, "Teleport To Player", {}, "", function() NET.FUNCTION.TELEPORT_TO(player_id) end)
+        menu.action(TELEPORT_LIST , "Teleport To My Waypoint", {}, "Blocked by most menus.\nPlayer must be in a vehicle.", function() NET.FUNCTION.TELEPORT_PLAYER_TO(player_id, NET.FUNCTION.GET_BLIP_POSITION()) end)
+        menu.action(TELEPORT_LIST, "Teleport Into Their Vehicle", {}, "", function() NET.COMMAND.TELEPORT_INTO_PLAYER_VEHICLE(player_id) end)
         menu.action(TELEPORT_LIST, "Teleport To Casino", {}, "", function() menu.trigger_commands("casinotp"..players.get_name(player_id)) end)
         menu.toggle(NET.PROFILE[tostring(player_id)].Menu, "Block Traffic", {}, "Stops exchanging data with player.", function(Enabled) local TargetName = players.get_name(player_id) if Enabled then menu.trigger_commands("timeout"..TargetName.." on") else menu.trigger_commands("timeout"..TargetName.." off") end end)
         menu.action(NET.PROFILE[tostring(player_id)].Menu, "Delete", {}, "Delete the label if the player isn't in the session anymore.", function() MenuBuffer:delete() end)
@@ -2470,7 +2421,7 @@ menu.action(SERVER_CRASH_LIST, "[NIGHT] Rope Crash", {}, "Blocked by most menus.
 menu.action(SERVER_CRASH_LIST, "[NIGHT] Land Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.LAND() end)
 menu.action(SERVER_CRASH_LIST, "[NIGHT] Umbrella V8 Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.UMBRELLAV8() end)
 menu.action(SERVER_CRASH_LIST, "[NIGHT] Umbrella V1 Crash", {}, "Blocked by most menus.", function() NET.COMMAND.CRASH.SERVER.UMBRELLAV1() end)
-menu.action(MODERATE_PLAYERS_LIST, "Crash Players", {}, "Express Crash Targeted Players.", NET.COMMAND.CRASH_PLAYERS)
+menu.action(MODERATE_PLAYERS_LIST, "Express Crash Players", {}, "Blocked by most menus.", NET.COMMAND.CRASH_PLAYERS)
 menu.divider(MODERATE_PLAYERS_LIST, "More Options")
 menu.toggle_loop(MODERATE_PLAYERS_LIST, "Kill All", {}, "", function() NET.COMMAND.KILL_PLAYERS() end)
 menu.toggle(MODERATE_PLAYERS_LIST, "Automatic Modders Removal", {"irondome"}, "Recommended to use when host.", function(Enabled) NET.VARIABLE.No_Modders_Session = Enabled end)
