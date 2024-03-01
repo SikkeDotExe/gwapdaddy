@@ -13,12 +13,13 @@
 ]]
 
 --[[
-Version 1.8a
-[+] Fixed Script Kick
+Version 1.8b
+[+] Improved Script Kick
+[+] Fixed Backend
 ]]
 
 IN_DEV = false
-VERSION = "1.8a"
+VERSION = "1.8b"
 
 -- Libraries
 util.require_natives(1676318796)
@@ -1040,7 +1041,7 @@ NET = {
     COMMAND = {
 
         KICK = {
-            SCRIPT = function(player_id) -- (S0) (S1) (S2) (S3) (S4) (S5) (MS3) (MS8)
+            SCRIPT = function(player_id) -- (S0) (S1) (S2) (S3) (S4) (S5) (MS3) (MS8) (CS2)
                 NET.COMMAND.GIVE_SCRIPT_HOST(player_id)
 
                 local functions = {1450115979, 623462469, -2102799478, 1980857009, -2051197492, -1013606569, -1852117343, -353458099, -1713699293, -1604421397, -1544003568, -1101672680}
@@ -1099,6 +1100,12 @@ NET = {
                 -- Orgasm (MS3) (MS8)
                 NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {Random, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
                 NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {Random, Random, 0, 0})
+                
+                --Dynamite (S2)
+                NET.FUNCTION.FIRE_EVENT(2067191610, player_id, {0, 0, -12988, -99097, 0})
+                NET.FUNCTION.FIRE_EVENT(323285304, player_id, {0, 0, -12988, -99097, 0})
+                NET.FUNCTION.FIRE_EVENT(495813132, player_id, {0, 0, -12988, -99097, 0})
+                NET.FUNCTION.FIRE_EVENT(323285304, player_id, {323285304, 64, 2139114019, 14299, 40016, 11434, 4595, 25992})
             end,
 
             WRATH = function(player_id)
@@ -1355,13 +1362,6 @@ NET = {
                     local Random = math.random(-2147483647, 2147483647)
                     NET.FUNCTION.FIRE_EVENT(-642704387, player_id, {player_id, 782258655, Random, Random, Random, Random, Random, Random, Random, math.random(1, 32), Random, Random, Random})
                 end
-
-                --Dynamite (S2)
-                NET.COMMAND.GIVE_SCRIPT_HOST(player_id)
-                NET.FUNCTION.FIRE_EVENT(2067191610, player_id, {0, 0, -12988, -99097, 0})
-                NET.FUNCTION.FIRE_EVENT(323285304, player_id, {0, 0, -12988, -99097, 0})
-                NET.FUNCTION.FIRE_EVENT(495813132, player_id, {0, 0, -12988, -99097, 0})
-                NET.FUNCTION.FIRE_EVENT(323285304, player_id, {323285304, 64, 2139114019, 14299, 40016, 11434, 4595, 25992})
             end,
 
             MORTAR = function(player_id) -- (XF) Crash Objects
@@ -1776,8 +1776,6 @@ NET = {
         BECOME_SCRIPT_HOST = function()
             if players.get_script_host() ~= players.user() then
                 util.request_script_host("freemode")
-            else
-                util.toast("You already are script host.")
             end
         end,
 
@@ -1788,7 +1786,7 @@ NET = {
 
         GIVE_SCRIPT_HOST = function(player_id)
             NET.COMMAND.BECOME_SCRIPT_HOST()
-            util.yield(1000)
+            repeat util.yield() until players.get_script_host() == players.user()
             util.give_script_host("freemode", player_id)
         end,
 
@@ -2354,12 +2352,11 @@ NET = {
             util.stop_thread()
         end)
 
-        local MODERATE_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Moderate")
-        local KICK_OPTIONS = menu.list(MODERATE_LIST, "Kicks")
+        local KICK_OPTIONS = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Kicks")
         menu.action(KICK_OPTIONS, "[STAND] Wrath Kick", {"wkick"}, "Will try to get host to kick target if available.", function() NET.COMMAND.KICK.WRATH(player_id) end)
         menu.action(KICK_OPTIONS, "[STAND] Stand Kick", {}, "Blocked by popular menus.", function() NET.FUNCTION.KICK_PLAYER(player_id) end)
         menu.action(KICK_OPTIONS, "[NET] Script Kick", {"scriptkick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.SCRIPT(player_id) end)
-        local CRASH_OPTIONS = menu.list(MODERATE_LIST, "Crashes")
+        local CRASH_OPTIONS = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Crashes")
         menu.action(CRASH_OPTIONS, "[NET] Express Crash", {"xpresscrash"}, "Blocked by popular menus.", function() NET.COMMAND.CRASH.EXPRESS(player_id) end)
         menu.action(CRASH_OPTIONS, "[STAND] Stand Crash", {}, "Blocked by popular menus.\nDon't be close, this crash will affect everyone near the target.", function() NET.FUNCTION.CRASH(player_id) end)
         menu.action(CRASH_OPTIONS, "[NET] Mortar Crash", {"mortarcrash"}, "Blocked by most menus.\nDon't be close, this crash will affect everyone near the target.", function() NET.COMMAND.CRASH.MORTAR(player_id) end)
