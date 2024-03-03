@@ -13,13 +13,16 @@
 ]]
 
 --[[
-Version 1.8b
-[+] Improved Script Kick
-[+] Fixed Backend
+Version 1.9
+[+] Added Auto Ghost Griefers
+[+] Added Emp Player
+[+] Added Raygun Player
+[+] Added Explosive Ammo
+[+] Added Keep Boost Full
 ]]
 
 IN_DEV = false
-VERSION = "1.8b"
+VERSION = "1.9"
 
 -- Libraries
 util.require_natives(1676318796)
@@ -930,13 +933,6 @@ NET = {
             return BlipCoords
         end,
 
-        EXPLODE_PLAYER = function(player_id)
-            for next = 1, 85 do -- fuck it
-                local player_pos = players.get_position(player_id)
-                FIRE.ADD_EXPLOSION(player_pos.x, player_pos.y, player_pos.z, next, 100, true, false, 0, false)
-            end
-        end,
-
         KICK_PLAYER_FROM_VEHICLE = function(player_id)
             local Ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
             local Vehicle = PED.GET_VEHICLE_PED_IS_USING(Ped)
@@ -967,48 +963,64 @@ NET = {
             NET.FUNCTION.FIRE_EVENT(800157557, player_id, {player_id, 225624744, math.random(0, 9999)})
         end,
 
-        -- I can probably optimize this ngl
-        CHANGE_PLAYER_MODEL = function(hash)
+        SPAWN_EXPLOSION = function(position, type, audible, invisible, nodamage)
+            if position then
+                FIRE.ADD_EXPLOSION(position.x, position.y, position.z, type, 100, audible, invisible, 0, nodamage)
+            end
+        end,
+
+        GET_SHOT_COORDS = function(player_id)
+            local impact = v3.new()
+            WEAPON.GET_PED_LAST_WEAPON_IMPACT_COORD(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id), memory.addrof(impact))
+            if impact.x ~= 0 and impact.y ~= 0 and impact.z ~= 0 then
+                return impact
+            end
+            return nil
+        end,
+
+        REQUEST_MODEL = function(hash, callback)
+            local result
             local model_hash = hash
             STREAMING.REQUEST_MODEL(model_hash)
             while (not STREAMING.HAS_MODEL_LOADED(model_hash)) do
-                util.yield(0)
+                util.yield()
             end
-            PLAYER.SET_PLAYER_MODEL(model_hash)
+            if callback then
+                result = callback()
+            end
             STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(model_hash)
+            return result
         end,
 
+        CHANGE_PLAYER_MODEL = function(hash)
+            NET.FUNCTION.REQUEST_MODEL(hash, function() PLAYER.SET_PLAYER_MODEL(hash) end)
+        end,
+
+        --https://github.com/DurtyFree/gta-v-data-dumps/blob/master/ObjectList.ini
         SPAWN_OBJECT = function(model, position, invisible, dynamic)
-            STREAMING.REQUEST_MODEL(model)
-            while not STREAMING.HAS_MODEL_LOADED(model) do util.yield() end
-            local spawned = OBJECT.CREATE_OBJECT(model, position.x, position.y, position.z, true, true, dynamic)
-            STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(model)
+            local spawned = NET.FUNCTION.REQUEST_MODEL(model, function() return OBJECT.CREATE_OBJECT(model, position.x, position.y, position.z, true, true, dynamic) end)
             ENTITY.SET_ENTITY_VISIBLE(spawned, not invisible)
-            ENTITY.FREEZE_ENTITY_POSITION(spawned, dynamic)
+            ENTITY.FREEZE_ENTITY_POSITION(spawned, not dynamic)
             return spawned
         end,
 
+        --https://github.com/DurtyFree/gta-v-data-dumps/blob/master/peds.json
         SPAWN_PED = function(model, position, invincible, invisible)
-            STREAMING.REQUEST_MODEL(model)
-            while not STREAMING.HAS_MODEL_LOADED(model) do util.yield() end
-            -- 26 is either PED_TYPE_SPECIAL or PED_TYPE_MISSION
-            local spawned = PED.CREATE_PED(26, model, position.x, position.y, position.z, 0, true, true)
-            STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(model)
+            local spawned = NET.FUNCTION.REQUEST_MODEL(model, function() return PED.CREATE_PED(26, model, position.x, position.y, position.z, 0, true, true) end)
             ENTITY.SET_ENTITY_INVINCIBLE(spawned, invincible)
             ENTITY.SET_ENTITY_VISIBLE(spawned, not invisible)
             return spawned
         end,
 
+        --https://github.com/DurtyFree/gta-v-data-dumps/blob/master/vehicles.json
         SPAWN_VEHICLE = function(model, position, invincible, invisible)
-            STREAMING.REQUEST_MODEL(model)
-            while not STREAMING.HAS_MODEL_LOADED(model) do util.yield() end
-            local spawned = VEHICLE.CREATE_VEHICLE(model, position.x, position.y, position.z, 0, true, true, false)
-            STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(model)
+            local spawned = NET.FUNCTION.REQUEST_MODEL(model, function() return VEHICLE.CREATE_VEHICLE(model, position.x, position.y, position.z, 0, true, true, false) end)
             ENTITY.SET_ENTITY_INVINCIBLE(spawned, invincible)
             ENTITY.SET_ENTITY_VISIBLE(spawned, not invisible)
             return spawned
         end,
 
+        --https://github.com/DurtyFree/gta-v-data-dumps/blob/master/particleEffectsCompact.json
         SPAWN_PTFX = function(fxasset, asset, position, scale)
             STREAMING.REQUEST_NAMED_PTFX_ASSET(fxasset)
             while not STREAMING.HAS_NAMED_PTFX_ASSET_LOADED(fxasset) do util.yield() end
@@ -1029,6 +1041,10 @@ NET = {
                 collision or false,
                 isPed or false, 0, true
             )
+        end,
+
+        IS_PLAYER_AIMING_AT = function(player_id, entity)
+            return PLAYER.IS_PLAYER_FREE_AIMING_AT_ENTITY(player_id, entity)
         end,
         
         CAGE_PLAYER = function(player_id)
@@ -1095,13 +1111,13 @@ NET = {
                 NET.FUNCTION.FIRE_EVENT(-2026172248, player_id, {Random, 0, 0, 0, 1})
                 
                 -- Mailbomb (S5) - Works
-                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {Random, 122, 1})
+                NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {math.random(1, 256), math.random(1, 512), math.random(0, 1)})
                 
                 -- Orgasm (MS3) (MS8)
                 NET.FUNCTION.FIRE_EVENT(1450115979, player_id, {Random, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
                 NET.FUNCTION.FIRE_EVENT(-1986344798, player_id, {Random, Random, 0, 0})
                 
-                --Dynamite (S2)
+                -- Dynamite (S2)
                 NET.FUNCTION.FIRE_EVENT(2067191610, player_id, {0, 0, -12988, -99097, 0})
                 NET.FUNCTION.FIRE_EVENT(323285304, player_id, {0, 0, -12988, -99097, 0})
                 NET.FUNCTION.FIRE_EVENT(495813132, player_id, {0, 0, -12988, -99097, 0})
@@ -2247,7 +2263,8 @@ NET = {
             local ToStun = NET.FUNCTION.GET_PLAYERS_FROM_SELECTION()
             for next = 1, #ToStun do
                 if players.exists(ToStun[next]) then
-                    NET.FUNCTION.EXPLODE_PLAYER(ToStun[next])
+                    local player_pos = players.get_position(ToStun[next])
+                    NET.FUNCTION.SPAWN_EXPLOSION(player_pos, 1, true, false, false)
                     util.yield(100)
                 end
             end
@@ -2355,9 +2372,9 @@ NET = {
         local KICK_OPTIONS = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Kicks")
         menu.action(KICK_OPTIONS, "[STAND] Wrath Kick", {"wkick"}, "Will try to get host to kick target if available.", function() NET.COMMAND.KICK.WRATH(player_id) end)
         menu.action(KICK_OPTIONS, "[STAND] Stand Kick", {}, "Blocked by popular menus.", function() NET.FUNCTION.KICK_PLAYER(player_id) end)
-        menu.action(KICK_OPTIONS, "[NET] Script Kick", {"scriptkick"}, "Blocked by most menus.", function() NET.COMMAND.KICK.SCRIPT(player_id) end)
+        menu.action(KICK_OPTIONS, "[NET] Script Kick", {"scriptkick"}, "Blocked by most menus.\nMay break freemode script temporarily.", function() NET.COMMAND.KICK.SCRIPT(player_id) end)
         local CRASH_OPTIONS = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Crashes")
-        menu.action(CRASH_OPTIONS, "[NET] Express Crash", {"xpresscrash"}, "Blocked by popular menus.", function() NET.COMMAND.CRASH.EXPRESS(player_id) end)
+        menu.action(CRASH_OPTIONS, "[NET] Express Crash", {"xcrash"}, "Blocked by popular menus.", function() NET.COMMAND.CRASH.EXPRESS(player_id) end)
         menu.action(CRASH_OPTIONS, "[STAND] Stand Crash", {}, "Blocked by popular menus.\nDon't be close, this crash will affect everyone near the target.", function() NET.FUNCTION.CRASH(player_id) end)
         menu.action(CRASH_OPTIONS, "[NET] Mortar Crash", {"mortarcrash"}, "Blocked by most menus.\nDon't be close, this crash will affect everyone near the target.", function() NET.COMMAND.CRASH.MORTAR(player_id) end)
         menu.action(CRASH_OPTIONS, "[NET] Chicken Crash", {"hencrash"}, "Blocked by most menus.\nDon't be close, this crash will affect everyone near the target.", function() NET.COMMAND.CRASH.CHICKEN(player_id) end)
@@ -2366,17 +2383,19 @@ NET = {
         menu.toggle_loop(TROLLING_LIST, "Smokescreen", {}, "Blocked by popular menus.", function() NET.COMMAND.SMOKESCREEN_PLAYER(player_id) end, function() local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id) GRAPHICS.REMOVE_PARTICLE_FX(ptfx) STREAMING.REMOVE_NAMED_PTFX_ASSET("scr_as_trans") end)
         menu.toggle_loop(TROLLING_LIST, "Spam Particles", {}, "Blocked by most menus.", function() NET.FUNCTION.SPAWN_PTFX("scr_rcbarry2", "scr_exp_clown", ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)), 1) end)
         menu.toggle_loop(TROLLING_LIST, "Force Camera Forward", {}, "Blocked by most menus.", function() NET.FUNCTION.FORCE_PLAYER_CAMERA_FORWARD(player_id) end)
+        menu.toggle_loop(TROLLING_LIST, "Emp", {}, "Blocked by most menus.", function() NET.FUNCTION.SPAWN_EXPLOSION(players.get_position(player_id), 65, true, false, true) end)
+        menu.toggle_loop(TROLLING_LIST, "Raygun", {}, "Blocked by most menus.", function() NET.FUNCTION.SPAWN_EXPLOSION(players.get_position(player_id), 70, true, false, true) end)
         menu.toggle_loop(TROLLING_LIST, "Stun", {}, "", function() NET.COMMAND.STUN_PLAYER(player_id) end)
-        menu.toggle_loop(TROLLING_LIST, "Launch", {}, "Blocked by popular menus.", function() NET.COMMAND.LAUNCH_PLAYER(player_id) end, function() if veh ~= 0 and ENTITY.DOES_ENTITY_EXIST(veh) then entities.delete(veh) end end)
-        menu.toggle_loop(TROLLING_LIST, "Stumble", {}, "Blocked by popular menus.", function() NET.COMMAND.STUMBLE_PLAYER(player_id) end)
-        menu.toggle_loop(TROLLING_LIST, "Glitch", {}, "Blocked by most menus.", function() NET.FUNCTION.BLACKSCREEN_PLAYER(player_id) end)
-        menu.toggle_loop(TROLLING_LIST, "Explode", {}, "You will not be blamed in the killfeed.", function() NET.FUNCTION.EXPLODE_PLAYER(player_id) end)
-        menu.toggle_loop(TROLLING_LIST, "Kill", {}, "You will always be blamed.\nWorks for players in interior.", function() NET.FUNCTION.KILL_PLAYER(player_id) end)
-        menu.action(TROLLING_LIST, "Send Corrupt Invitation", {}, "Blocked by most menus.\nIf the player accepts they will be stuck in an infinite loading screen.", function() NET.FUNCTION.SEND_PLAYER_CORRUPT_INVITE(player_id) end)
         local PROP_GLITCH_LIST = menu.list(TROLLING_LIST, "Prop Spam", {}, "Blocked by popular menus.")
         menu.list_select(PROP_GLITCH_LIST, "Object", {}, "Object to spam.", NET.TABLE.GLITCH_OBJECT.NAME, 1, function(index) NET.VARIABLE.Object_Hash = util.joaat(NET.TABLE.GLITCH_OBJECT.OBJECT[index]) end)
         menu.slider(PROP_GLITCH_LIST, "Spam delay", {}, "", 0, 3000, 50, 10, function(amount) delay = amount end)
         menu.toggle(PROP_GLITCH_LIST, "Spam player", {}, "", function(toggled) NET.COMMAND.GLITCH_PLAYER(player_id, toggled) end)
+        menu.toggle_loop(TROLLING_LIST, "Launch", {}, "Blocked by popular menus.", function() NET.COMMAND.LAUNCH_PLAYER(player_id) end, function() if veh ~= 0 and ENTITY.DOES_ENTITY_EXIST(veh) then entities.delete(veh) end end)
+        menu.toggle_loop(TROLLING_LIST, "Stumble", {}, "Blocked by popular menus.", function() NET.COMMAND.STUMBLE_PLAYER(player_id) end)
+        menu.toggle_loop(TROLLING_LIST, "Glitch", {}, "Blocked by most menus.", function() NET.FUNCTION.BLACKSCREEN_PLAYER(player_id) end)
+        menu.toggle_loop(TROLLING_LIST, "Explode", {}, "You will not be blamed in the killfeed.", function() NET.FUNCTION.SPAWN_EXPLOSION(players.get_position(player_id), 1, true, false, false) end)
+        menu.toggle_loop(TROLLING_LIST, "Kill", {}, "You will always be blamed.\nWorks for players in interior.", function() NET.FUNCTION.KILL_PLAYER(player_id) end)
+        menu.action(TROLLING_LIST, "Send Corrupt Invitation", {}, "Blocked by most menus.\nIf the player accepts they will be stuck in an infinite loading screen.", function() NET.FUNCTION.SEND_PLAYER_CORRUPT_INVITE(player_id) end)
         local NEUTRAL_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Neutral")
         menu.toggle(NEUTRAL_LIST, "Spectate", {}, "", function(Enabled) NET.COMMAND.SPECTATE_PLAYER(player_id, Enabled) end)
         menu.toggle_loop(NEUTRAL_LIST, "Ghost Player", {}, "", function() NETWORK.SET_REMOTE_PLAYER_AS_GHOST(player_id, true) end, function() NETWORK.SET_REMOTE_PLAYER_AS_GHOST(player_id, false) end)
@@ -2384,13 +2403,14 @@ NET = {
         menu.toggle_loop(NEUTRAL_LIST, "Vanity Particles", {}, "", function(Enabled) NET.COMMAND.VANITY_PARTICLES(player_id) end)
         local FRIENDLY_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Friendly")
         local SPAWN_VEHICLE_LIST = menu.list(FRIENDLY_LIST, "Spawn Vehicle") for i, types in pairs(NET.TABLE.VEHICLE) do local LIST = menu.list(SPAWN_VEHICLE_LIST, tostring(i)) for j, k in pairs(types) do menu.action(LIST, "Spawn - "..tostring(k), {}, "", function() menu.trigger_commands("as "..players.get_name(player_id).." "..k) end) end end
+        menu.toggle_loop(FRIENDLY_LIST, "Explosive Ammo", {}, "Works better if the player is close.", function() NET.FUNCTION.SPAWN_EXPLOSION(NET.FUNCTION.GET_SHOT_COORDS(player_id), 1, true, false, false) end)
         menu.toggle_loop(FRIENDLY_LIST, "RP Drop", {}, "Will give rp until player is level 120.", function() NET.COMMAND.GIVE_PLAYER_RP(player_id, 0) end)
         menu.toggle(FRIENDLY_LIST, "Money Drop", {}, "Limited money drop, must be close to player.", function(Enabled) NET.COMMAND.MONEY_DROP_PLAYER(player_id, Enabled) end)
         menu.action(FRIENDLY_LIST, "Give All Collectibles", {}, "Up to $300k.\nCan only be used once per player.", function() NET.FUNCTION.TRIGGER_GIVE_ALL_COLLECTIBLES(player_id) end)--menu.trigger_commands("givecollectibles"..players.get_name(player_id)) end)
         menu.action(FRIENDLY_LIST, "Gift Spawned Vehicle", {}, "Spawn fully tuned deathbike2 for best results.\nPlayer must have full garage.\nGifts the latest spawned car.", function() menu.trigger_commands("gift"..players.get_name(player_id)) end)
         menu.toggle(FRIENDLY_LIST, "Helpful Events", {}, "Never Wanted, Off The Radar, Vehicle God, Auto-Heal.", function(Enabled) NET.COMMAND.HELPFUL_EVENTS(player_id, Enabled) end)
+        menu.action(FRIENDLY_LIST, "Give Script Host", {}, "Reduces loading time.", function() NET.COMMAND.GIVE_SCRIPT_HOST(player_id) end)
         menu.action(FRIENDLY_LIST, "Fix Loading Screen", {"fix"}, "Useful when stuck in a loading screen.", function() NET.COMMAND.FIX_LOADING_SCREEN(player_id) end)
-        menu.action(FRIENDLY_LIST, "Reduce Loading Time", {}, "Attempts to help the player by giving them script host.", function() NET.COMMAND.GIVE_SCRIPT_HOST(player_id) end)
         local TELEPORT_LIST = menu.list(NET.PROFILE[tostring(player_id)].Menu, "Teleport")
         menu.action(TELEPORT_LIST , "Teleport To Me", {}, "Blocked by most menus.\nPlayer must be in a vehicle.", function() NET.FUNCTION.TELEPORT_PLAYER_TO(player_id, ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()))) end)
         menu.action(TELEPORT_LIST, "Teleport To Player", {}, "", function() NET.FUNCTION.TELEPORT_TO(player_id) end)
@@ -2447,6 +2467,7 @@ menu.toggle(PROFILES_LIST, "Disable Reactions", {}, "Disables kick & crash react
 menu.action(PROFILES_LIST, "Set Profile", {}, "", function() if NET.VARIABLE.Current_Profile == 1 then NET.COMMAND.SET_PROFILE_DEFAULT() elseif NET.VARIABLE.Current_Profile == 2 then NET.COMMAND.SET_PROFILE_STRICT() elseif NET.VARIABLE.Current_Profile == 3 then NET.COMMAND.SET_PROFILE_WARRIOR() end end)
 
 local WEAPON_LIST = menu.list(SELF_LIST, "Weapons")
+menu.toggle_loop(WEAPON_LIST, "Explosive Ammo", {}, "", function() NET.FUNCTION.SPAWN_EXPLOSION(NET.FUNCTION.GET_SHOT_COORDS(players.user()), 1, true, false, false) end)
 menu.toggle_loop(WEAPON_LIST, "Fast Hand", {}, "Faster weapon swapping.", function() if TASK.GET_IS_TASK_ACTIVE(players.user_ped(), 56) then PED.FORCE_PED_AI_AND_ANIMATION_UPDATE(players.user_ped()) end end)
 menu.toggle_loop(WEAPON_LIST, "Hitbox Expander", {}, "Expands every player's hitbox.", NET.COMMAND.EXPAND_ALL_HITBOXES)
 menu.toggle_loop(WEAPON_LIST, "Rocket Aimbot", {}, "Lock onto players with homing rpg.", NET.COMMAND.LOCK_ONTO_PLAYERS, function() for i, player_id in pairs(players.list_except(true)) do local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id) PLAYER.REMOVE_PLAYER_TARGETABLE_ENTITY(players.user(), ped) end end)
@@ -2457,6 +2478,15 @@ menu.toggle_loop(VEHICLE_LIST,"Rainbow Headlights", {""}, "", function(Enabled) 
 menu.toggle(VEHICLE_LIST,"Rainbow Neons", {""}, "", function(Enabled) NET.COMMAND.RAINBOW_NEONS(Enabled) end)
 menu.toggle(VEHICLE_LIST, "Drift Tyres", {}, "", function(Enabled) VEHICLE.SET_DRIFT_TYRES(PED.GET_VEHICLE_PED_IS_USING(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())), Enabled) end)
 menu.toggle(VEHICLE_LIST, "Loud Radio", {}, "Not sure this is networked.", function(Enabled) AUDIO.SET_VEHICLE_RADIO_LOUD(PED.GET_VEHICLE_PED_IS_USING(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())), Enabled) end)
+menu.toggle_loop(VEHICLE_LIST, "Keep Boost Full", {}, "", function()
+    local Ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
+    if PED.IS_PED_IN_ANY_VEHICLE(Ped) then
+        local Vehicle = PED.GET_VEHICLE_PED_IS_USING(Ped)
+        if VEHICLE.GET_HAS_ROCKET_BOOST(Vehicle) then
+            VEHICLE.SET_ROCKET_BOOST_FILL(Vehicle, 100.0)
+        end
+    end
+end, function() VEHICLE.SET_ROCKET_BOOST_ACTIVE(PED.GET_VEHICLE_PED_IS_USING(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())), false) end)
 
 local VEHICLE_WINDOWS_LIST = menu.list(VEHICLE_LIST, "Vehicle Windows")
 menu.list_action(VEHICLE_WINDOWS_LIST, "Roll Up Window", {}, "", {"Left Front", "Right Front", "Left Back", "Right Back"}, function(Option) VEHICLE.ROLL_UP_WINDOW(PED.GET_VEHICLE_PED_IS_USING(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())), Option-1) end)
@@ -2539,6 +2569,16 @@ menu.action(TELEPORT_PLAYERS_LIST, "Teleport To Me", {}, "", NET.COMMAND.SUMMON_
 menu.action(TELEPORT_PLAYERS_LIST, "Teleport To My Waypoint", {}, "", NET.COMMAND.TELEPORT_PLAYERS_TO_WAYPOINT)
 menu.action(TELEPORT_PLAYERS_LIST, "Teleport To Casino", {}, "", NET.COMMAND.TELEPORT_PLAYERS_TO_CASINO)
 menu.toggle(ALL_PLAYERS_LIST, "Ghost Players", {}, "", function(Enabled) NET.COMMAND.GHOST_PLAYERS(Enabled) end)
+menu.toggle_loop(ALL_PLAYERS_LIST, "Auto Ghost Griefers", {}, "Automatically ghosts players who aim at you.\nWon't protect you from vehicles and long distance explosives.", function()
+    local Players = players.list(false)
+    for next = 1, #Players do -- could also check if vehicle ped is driving is being aimed at
+        if NET.FUNCTION.IS_PLAYER_AIMING_AT(Players[next], players.user_ped()) then
+            NETWORK.SET_REMOTE_PLAYER_AS_GHOST(Players[next], true)
+        else
+            NETWORK.SET_REMOTE_PLAYER_AS_GHOST(Players[next], false)
+        end
+    end
+end)
 
 local SESSION_LIST = menu.list(menu.my_root(), "Session")
 
@@ -2564,20 +2604,10 @@ menu.action(UNSTUCK_LIST, "Quit To SP", {}, "", function() menu.trigger_commands
 menu.action(UNSTUCK_LIST, "Force Quit To SP", {}, "", function() menu.trigger_commands("forcequittosp") end)
 
 local EXPERIMENTAL_LIST = menu.list(menu.my_root(), "Experimental")
-menu.toggle_loop(EXPERIMENTAL_LIST, "Always Boost", {}, "", function()
-    local Ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())
-    local Vehicle = PED.GET_VEHICLE_PED_IS_USING(Ped)
-    NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(Vehicle)
-    if VEHICLE.GET_HAS_ROCKET_BOOST(Vehicle) then
-        VEHICLE.SET_SCRIPT_ROCKET_BOOST_RECHARGE_TIME(Vehicle, 0)
-        VEHICLE.SET_ROCKET_BOOST_ACTIVE(Vehicle, true)
-        VEHICLE.SET_ROCKET_BOOST_FILL(Vehicle, 100.0)
-    end
-end)
 menu.action(EXPERIMENTAL_LIST, "Speed Boost", {}, "kinda useless", function()
     VEHICLE.SET_VEHICLE_FORWARD_SPEED(PED.GET_VEHICLE_PED_IS_USING(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())), 500)
 end)
-menu.action(EXPERIMENTAL_LIST, "Lights", {}, "must test if networked", function(Enabled)
+menu.action(EXPERIMENTAL_LIST, "Lights", {}, "must test if networked", function()
     VEHICLE.SET_VEHICLE_LIGHT_MULTIPLIER(PED.GET_VEHICLE_PED_IS_USING(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user())), 500)
 end)
 
