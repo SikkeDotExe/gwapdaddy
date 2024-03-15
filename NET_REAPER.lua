@@ -13,26 +13,22 @@
 ]]
 
 --[[
-Version 2.0
+Version 2.0a
 
-Dev Note: 
+Dev Note: Player list improvements have not been tested on a long-term period
 
-[+] Added Script Crash
-[+] Added Zoo Crash
-[+] Added Lamp Crash
-[+] Added Freeze Player
 [+] Improved Player List
-[+] Improved Object Crash
-[+] Rewritten Backend
-[-] Removed Spawn Player Vehicle (Temporarily)
-[-] Removed Host Addict (Temporarily)
+[+] Improved Freemode Death
+[+] Improved Kick From Vehicle
+[-] Removed Spawn Player Vehicle
+[-] Removed Host Addict
 ]]
 
 -- Settings
-VERSION = "2"
-REFRESH_TIME = 5000 -- Playerlist refresh time (ms)
+VERSION = "2.0a"
+REFRESH_TIME = 1000 -- Playerlist refresh time (ms)
 IN_DEV = false -- Disables auto-updater and enables debug features
-IS_CLOSING = false -- [DON'T TOUCH] | Signals loops to break when true
+IS_CLOSING = false -- Signals loops to break when true
 
 -- Auto Update
 local status, auto_updater = pcall(require, "auto-updater")
@@ -72,6 +68,7 @@ end
 util.require_natives(1676318796)
 require "lib.net.Intro"
 
+-- My own implementation of the find function.
 table.find = function(t, k)
     for next = 1, #t do
         if t[next] == k then
@@ -81,49 +78,56 @@ table.find = function(t, k)
     return false
 end
 
+-- Core | This is where all the functions are located.
 NET2 = {
     MENU = {
         Profiles = {},
         ToDisplay = 1,
         IgnoreHost = false,
 
-        DOES_PROFILES_EXIST = function(parent, Players)
-            for p = 1, #NET2.MENU.Profiles do
-                local profile_found = false
-                for i, player in pairs(Players) do
-                    local RID = players.get_rockstar_id(player)
-                    if NET2.MENU.Profiles[p].RID == RID then
-                        profile_found = true
-                    end
-                end
-
-                local command_found = false
-                if not profile_found then
-                    local Commands = parent:getChildren()
-                    for c = 1, #Commands do
-                        if string.lower(string.split(menu.get_menu_name(Commands[c]), " [")[1]) == NET2.MENU.Profiles[p].Name then
-                            Commands[c]:delete()
-                            NET2.MENU.Profiles[next] = nil
-                        end
+        DOES_PROFILE_EXIST = function(parent, RID)
+            local FoundProfile, ProfileIndex = false
+            for next = 1, #NET2.MENU.Profiles do
+                if NET2.MENU.Profiles[next] and NET2.MENU.Profiles[next].RID then -- fixed error 88?
+                    if NET2.MENU.Profiles[next].RID == RID then
+                        FoundProfile = true
+                        ProfileIndex = next
                     end
                 end
             end
+
+            local FoundMenu, Menu = false
+            local Commands = parent:getChildren()
+            for c = 1, #Commands do
+                local menu_name = menu.get_menu_name(Commands[c])
+                local strings = string.split(menu_name, " [")
+                if #strings > 0 and ProfileIndex then
+                    local format = string.lower(strings[1])
+                    if format == NET2.MENU.Profiles[ProfileIndex].Name then
+                        FoundMenu = true
+                        Menu = Commands[c]
+                    end
+                end
+            end
+
+            if FoundProfile and FoundMenu then
+                return Menu, ProfileIndex
+            end 
         end,
 
         CREATE_PROFILE = function(parent, player_id)
             local RID = players.get_rockstar_id(player_id)
             local TargetName = players.get_name(player_id)
 
-            for next = 1, #NET2.MENU.Profiles do
-                if NET2.MENU.Profiles[next].RID == RID then
-                    return
-                end
-            end
-            NET2.MENU.Profiles[#NET2.MENU.Profiles + 1] = {Name = string.lower(TargetName), RID = RID}
+            local profile_exists = NET2.MENU.DOES_PROFILE_EXIST(parent, RID)
+            if profile_exists then return profile_exists end
+
+            local idx = #NET2.MENU.Profiles + 1
+            NET2.MENU.Profiles[idx] = {Name = string.lower(TargetName), RID = RID}
 
             local Menu = menu.list(parent, players.get_name_with_tags(player_id))
             local TROLLING_LIST = menu.list(Menu, "Trolling")
-            menu.toggle_loop(TROLLING_LIST, "Kick From Vehicle", {}, "Blocked by most menus.\nWorks best close to player or while spectating.", function() NET2.PLAYER.KICK_FROM_VEHICLE(player_id) end)
+            menu.toggle_loop(TROLLING_LIST, "Kick From Vehicle", {}, "Blocked by most menus.", function() NET2.QUICK.EVENT.KICK_FROM_VEHICLE(player_id) end)
             menu.toggle_loop(TROLLING_LIST, "Spam Particles", {}, "Blocked by most menus.", function() NET2.PLAYER.PARTICLES(player_id) end)
             menu.toggle_loop(TROLLING_LIST, "Force Camera Forward", {}, "Blocked by most menus.", function() NET2.QUICK.EVENT.FORCE_CAMERA_FORWARD(player_id) end)
             menu.toggle_loop(TROLLING_LIST, "Freeze", {}, "Blocked by most menus.", function() NET2.QUICK.EVENT.FREEZE(player_id) end)
@@ -165,90 +169,83 @@ NET2 = {
             menu.action(CRASH_LIST, "Object Crash", {}, "Blocked by most menus.\nPlayers close to the target may be affected.", function() NET2.QUICK.CRASH.OBJECT(player_id) end)
             menu.action(CRASH_LIST, "Zoo Crash", {}, "Blocked by most menus.\nPlayers close to the target may be affected.", function() NET2.QUICK.CRASH.ZOO(player_id) end)
             menu.action(CRASH_LIST, "Lamp Crash", {}, "Blocked by most menus.\nPlayers close to the target may be affected.", function() NET2.QUICK.CRASH.LAMP(player_id) end)
-        
+
             util.create_thread(function()
-                repeat
-                    if players.exists(player_id) then
-                        -- Stats
-                        local Is_Modder = players.is_marked_as_modder(player_id)
-                        local Is_Modded = NET2.UTIL.IS_PLAYER_STATS_MODDED(player_id)
-                        local Is_Griefing = NET2.UTIL.IS_PLAYER_FLAGGED(player_id, "Attacking While Invulnerable")
-
-                        local Args = ""
-                        if player_id == players.user() then
-                            Args = " [SELF]"
-                        elseif NET2.UTIL.IS_PLAYER_FLAGGED(player_id, "2Take1 User") then
-                            Args = " [2TAKE1]"
-                        elseif Is_Modded then
-                            Args = " [$MOD]"
-                        end
-
-                        local visible = true
-                        if NET2.MENU.ToDisplay == 2 then
-                            if not Is_Modder and not Is_Modded and not Is_Griefing then
-                                visible = false
-                            end
-                        elseif NET2.MENU.ToDisplay == 3 then
-                            if Is_Modder or Is_Modded or Is_Griefing then
-                                visible = false
-                            end
-                        elseif NET2.MENU.IgnoreHost then
-                            if players.get_host() == player_id then
-                                visible = false
-                            end
-                        end
-
-                        -- shitty code but it keeps throwing errors which after multiple attempts I can't seem to be able to fix (retard much?)
-                        -- so instead I opted to mute the motherfucker because in the grand scheme of things it don't affect much anyways.
-                        local Country
-                        local Region
-                        local City
-
-                        local Success, err = pcall(function()
-                            Country = menu.ref_by_rel_path(menu.player_root(player_id), "Information>Connection>Country")
-                            Region = menu.ref_by_rel_path(menu.player_root(player_id), "Information>Connection>Region")
-                            City = menu.ref_by_rel_path(menu.player_root(player_id), "Information>Connection>City")
-                        end)
-
-                        if Success then
-                            Country = Country.value ~= "" and tostring(Country.value) or ""
-                            Region = Region.value ~= "" and tostring(Region.value)..", " or ""
-                            City = City.value ~= "" and tostring(City.value)..", " or ""
-                        else Country = "A" Region = "/" City = "N" end
-
-                        if Menu:isValid() then
-                             menu.set_help_text(Menu,
-                            "Location: "..City..Region..Country
-                            .."\nRank: "..tostring(players.get_rank(player_id))
-                            .."\nMoney: $"..tostring(NET2.UTIL.FORMAT_NUMBER(players.get_money(player_id)))
-                            .."\nK/D: "..tostring(players.get_kd(player_id))
-                            .."\nPing: "..tostring(NETWORK.NETWORK_GET_AVERAGE_PING(player_id))
-                            .."\nInVehicle: "..tostring(NET2.UTIL.IS_PLAYER_IN_VEHICLE(player_id) and true or false)
-                            )
-    
-                            menu.set_menu_name(Menu, players.get_name_with_tags(player_id)..Args)
-                            menu.set_visible(Menu, visible)
-                        end
-                    end
-        
-                    util.yield(REFRESH_TIME)
-                until IS_CLOSING or not players.exists(player_id)
+                repeat util.yield(REFRESH_TIME)
+                until not players.exists(player_id)
+                Menu:delete()
+                NET2.MENU.Profiles[idx] = nil
                 util.stop_thread()
             end)
+
+            return Menu
         end,
 
         REFRESH_PROFILES = function(parent)
             local Players = players.list()
             for next = 1, #Players do
-                if nomodders and Players[next] ~= players.user() then
+                local CurrentMenu, ProfileIndex = NET2.MENU.CREATE_PROFILE(parent, Players[next])
+
+                if nomodders then
                     if players.is_marked_as_modder(Players[next]) then
-                        NET2.QUICK.KICK(Players[next])
+                        if Players[next] ~= players.user() then
+                            NET2.QUICK.KICK(Players[next])
+                        end
                     end
-                else
-                    NET2.MENU.CREATE_PROFILE(parent, Players[next])
+                end
+
+                if CurrentMenu then
+                    -- Stats
+                    local Is_Modder = players.is_marked_as_modder(Players[next])
+                    local Is_Modded = NET2.UTIL.IS_PLAYER_STATS_MODDED(Players[next])
+                    local Is_Griefing = NET2.UTIL.IS_PLAYER_FLAGGED(Players[next], "Attacking While Invulnerable")
+
+                    local Args = ""
+                    if Players[next] == players.user() then Args = " [SELF]"
+                    elseif NET2.UTIL.IS_PLAYER_FLAGGED(Players[next], "2Take1 User") then Args = " [2TAKE1]"
+                    elseif Is_Modded then Args = " [$MOD]" end
+
+                    local visible = true
+                    if NET2.MENU.ToDisplay == 2 then
+                        if not Is_Modder and not Is_Modded and not Is_Griefing then visible = false end
+                    elseif NET2.MENU.ToDisplay == 3 then
+                        if Is_Modder or Is_Modded or Is_Griefing then visible = false end
+                    elseif NET2.MENU.IgnoreHost then
+                        if players.get_host() == Players[next] then visible = false end
+                    end
+
+                    local Country
+                    local Region
+                    local City
+
+                    local Success, err = pcall(function()
+                        Country = menu.ref_by_rel_path(menu.player_root(Players[next]), "Information>Connection>Country")
+                        Region = menu.ref_by_rel_path(menu.player_root(Players[next]), "Information>Connection>Region")
+                        City = menu.ref_by_rel_path(menu.player_root(Players[next]), "Information>Connection>City")
+                    end)
+
+                    if Success then
+                        Country = Country.value ~= "" and tostring(Country.value) or ""
+                        Region = Region.value ~= "" and tostring(Region.value)..", " or ""
+                        City = City.value ~= "" and tostring(City.value)..", " or ""
+                    else Country = "A" Region = "/" City = "N" end
+
+                    if CurrentMenu:isValid() then
+                         menu.set_help_text(CurrentMenu,
+                        "Location: "..City..Region..Country
+                        .."\nRank: "..tostring(players.get_rank(Players[next]))
+                        .."\nMoney: $"..tostring(NET2.UTIL.FORMAT_NUMBER(players.get_money(Players[next])))
+                        .."\nK/D: "..tostring(players.get_kd(Players[next]))
+                        .."\nPing: "..tostring(NETWORK.NETWORK_GET_AVERAGE_PING(Players[next]))
+                        .."\nInVehicle: "..tostring(NET2.UTIL.IS_PLAYER_IN_VEHICLE(Players[next]) and true or false)
+                        )
+
+                        menu.set_menu_name(CurrentMenu, players.get_name_with_tags(Players[next])..Args)
+                        menu.set_visible(CurrentMenu, visible)
+                    end
                 end
             end
-            NET2.MENU.DOES_PROFILES_EXIST(parent, Players)
+
             menu.set_menu_name(PLAYER_COUNT, "Players ("..#Players..")")
         end,
     },
@@ -327,8 +324,8 @@ NET2 = {
             --S0
             NET2.UTIL.FIRE_EVENT(-1986344798, player_id, {Random, Random, 0, 0})
             for next = 1, #functions do
-                NET2.UTIL.FIRE_EVENT(functions[next], player_id, {Random})
-                NET2.UTIL.FIRE_EVENT(functions[next], player_id, {Random, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+                NET2.UTIL.FIRE_EVENT(functions[next], player_id, {handle})
+                NET2.UTIL.FIRE_EVENT(functions[next], player_id, {handle, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
             end
             -- Eviction Notice (S0)
             NET2.UTIL.FIRE_EVENT(1613825825, player_id, {20, 1, -1, -1, -1, -1, player_id, Random})
@@ -337,10 +334,10 @@ NET2 = {
             --S1 - May not work () Tested w/ and w/o SH | Is Detected, Doesn't Kick
             NET2.UTIL.FIRE_EVENT(-901348601, player_id, {Random})
             --S2 - May not work () Tested w/ and w/o SH | Is Detected, Doesn't Kick
-            NET2.UTIL.FIRE_EVENT(-445044249, player_id, {Random, 0, 12, 0, 0, 0, 0, 0, 0})
-            NET2.UTIL.FIRE_EVENT(446749111, player_id, {Random, Random, 0})
+            NET2.UTIL.FIRE_EVENT(-445044249, player_id, {handle, players.user(), -1, -1})
+            NET2.UTIL.FIRE_EVENT(446749111, player_id, {handle, Random, 0})
             --S3
-            NET2.UTIL.FIRE_EVENT(-1638522928, player_id, {Random, math.random(-1, 1), 0, 0, math.random(-1, 1), 0, 0, 0, 0, 0, 0, 0, 0, math.random(-1, 1), math.random(-1, 1)})
+            NET2.UTIL.FIRE_EVENT(-1638522928, player_id, {handle, players.user(), 0, 0, math.random(-1, 1), 0, 0, 0, 0, 0, 0, 0, 0, math.random(-1, 1), math.random(-1, 1)})
             NET2.UTIL.FIRE_EVENT(2079562891, player_id, {Random, 0, Random})
             NET2.UTIL.FIRE_EVENT(1214811719, player_id, {Random, 1, 1, 1, Random})
             NET2.UTIL.FIRE_EVENT(1504695802, player_id, {Random, Random})
@@ -357,10 +354,10 @@ NET2 = {
             NET2.UTIL.FIRE_EVENT(728200248, player_id, {Random, Random, Random})
             NET2.UTIL.FIRE_EVENT(-1091407522, player_id, {Random, 1, Random})
             --S4 - May not work () Tested w/ and w/o SH | Is Detected, Doesn't Kick
-            NET2.UTIL.FIRE_EVENT(1269949700, player_id, {Random, 0, Random})
+            NET2.UTIL.FIRE_EVENT(1269949700, player_id, {handle, 0, Random})
             NET2.UTIL.FIRE_EVENT(-1547064369, player_id, {Random, 0, Random})
-            NET2.UTIL.FIRE_EVENT(-2122488865, player_id, {Random, 0, Random})
-            NET2.UTIL.FIRE_EVENT(-2026172248, player_id, {Random, 0, 0, 0, 1})
+            NET2.UTIL.FIRE_EVENT(-2122488865, player_id, {handle, 0, Random})
+            NET2.UTIL.FIRE_EVENT(-2026172248, player_id, {handle, 0, 0, 0, 1})
             -- Mailbomb (S5) - Works
             NET2.UTIL.FIRE_EVENT(1450115979, player_id, {math.random(1, 256), math.random(1, 512), math.random(0, 1)})
             -- Orgasm (MS3) (MS8)
@@ -575,7 +572,8 @@ NET2 = {
                     NET2.UTIL.FIRE_EVENT(1103127469, player_id, {4194304, 180, 3, Random, Random, 13, 10, Random, Random, Random, Random, Random, Random, Random, 0, 0, Random, Random, Random, Random, Random, 1, Random, Random})
                     NET2.UTIL.FIRE_EVENT(-375628860, player_id, {player_id, Random})
                     -- (S4)
-                    NET2.UTIL.FIRE_EVENT(800157557, player_id, {8, Random, Random})
+                    -- Random?
+                    NET2.UTIL.FIRE_EVENT(800157557, player_id, {134217728, 385726943, Random})
                     -- (S2)
                     NET2.UTIL.FIRE_EVENT(2067191610, player_id, {0, 0, -12988, -99097, 0})
                     NET2.UTIL.FIRE_EVENT(323285304, player_id, {0, 0, -12988, -99097, 0})
@@ -655,6 +653,10 @@ NET2 = {
         },
 
         EVENT = {
+            KICK_FROM_VEHICLE = function(player_id)
+                NET2.UTIL.FIRE_EVENT(-503325966, player_id, {NETWORK.NETWORK_HASH_FROM_PLAYER_HANDLE(player_id), 0, 0, 0, 0, 0, 0, 0})
+            end,
+
             GLITCH = function(player_id)
                 if players.is_in_interior(player_id) then
                     NET2.UTIL.FIRE_EVENT(-1338917610, player_id, {player_id, player_id, player_id, math.random(-2147483647, 2147483647), player_id})
@@ -949,6 +951,7 @@ NET2 = {
     },
 
     PLAYER = {
+        --[[ Backup function since we have an event which is better.
         KICK_FROM_VEHICLE = function(player_id)
             local Ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
             local Vehicle = PED.GET_VEHICLE_PED_IS_USING(Ped)
@@ -960,7 +963,7 @@ NET2 = {
             until not PED.IS_PED_IN_ANY_VEHICLE(Ped) or Timeout == 50
             VEHICLE.SET_VEHICLE_EXCLUSIVE_DRIVER(Vehicle, Ped, 0)
         end,
-
+        ]]
         SMOKESCREEN = function(player_id)
             local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id)
             STREAMING.REQUEST_NAMED_PTFX_ASSET("scr_as_trans")
@@ -1338,7 +1341,7 @@ NET2 = {
     },
 }
 
--- Main Options
+-- UI
 local Title = menu.divider(menu.my_root(), "NET.REAPER")
 
 local SELF_LIST = menu.list(menu.my_root(), "Self")
@@ -1394,7 +1397,7 @@ menu.toggle(PLAYERS_LIST, "Ignore Host", {}, "Good for karma.", function(Enabled
 local ALL_PLAYERS_LIST = menu.list(PLAYERS_LIST, "All Players")
 local TROLLING_PLAYERS_LIST = menu.list(ALL_PLAYERS_LIST, "Trolling")
 menu.toggle_loop(TROLLING_PLAYERS_LIST, "Force All Cameras Forward", {}, "Blocked by most menus.", function() NET2.UTIL.FIRE_FOR_PLAYERS(NET2.MENU.ToDisplay, NET2.MENU.IgnoreHost, NET2.MENU.ToDisplay == 3 and true, NET2.QUICK.EVENT.FORCE_CAMERA_FORWARD) end)
-menu.toggle_loop(TROLLING_PLAYERS_LIST, "Kick All From Vehicle", {}, "Blocked by most menus.\nWorks best close to players or while spectating.", function() NET2.UTIL.FIRE_FOR_PLAYERS(NET2.MENU.ToDisplay, NET2.MENU.IgnoreHost, NET2.MENU.ToDisplay == 3 and true, NET2.PLAYER.KICK_FROM_VEHICLE) end)
+menu.toggle_loop(TROLLING_PLAYERS_LIST, "Kick All From Vehicle", {}, "Blocked by most menus.", function() NET2.UTIL.FIRE_FOR_PLAYERS(NET2.MENU.ToDisplay, NET2.MENU.IgnoreHost, NET2.MENU.ToDisplay == 3 and true, NET2.QUICK.EVENT.KICK_FROM_VEHICLE) end)
 menu.toggle_loop(TROLLING_PLAYERS_LIST, "Stun All", {}, "", function() NET2.UTIL.FIRE_FOR_PLAYERS(NET2.MENU.ToDisplay, NET2.MENU.IgnoreHost, NET2.MENU.ToDisplay == 3 and true, NET2.PLAYER.STUN) end)
 menu.toggle_loop(TROLLING_PLAYERS_LIST, "Freeze All", {}, "Blocked by most menus.", function() NET2.UTIL.FIRE_FOR_PLAYERS(NET2.MENU.ToDisplay, NET2.MENU.IgnoreHost, NET2.MENU.ToDisplay == 3 and true, NET2.QUICK.EVENT.FREEZE) end)
 menu.toggle_loop(TROLLING_PLAYERS_LIST, "Kill All", {}, "You will be blamed in the killfeed.", function() NET2.UTIL.FIRE_FOR_PLAYERS(NET2.MENU.ToDisplay, NET2.MENU.IgnoreHost, NET2.MENU.ToDisplay == 3 and true, NET2.QUICK.KILL) end)
@@ -1423,7 +1426,7 @@ menu.toggle_loop(WORLD_LIST, "Laser Show", {}, "Networked", NET2.FUNCTION.LASER_
 CONSTRUCTOR_LIST = menu.list(WORLD_LIST, "Constructor") pcall(require("lib.net.Constructor"))
 menu.action(menu.my_root(), "Credits", {}, "Made by @getfenv.", function() util.toast("I made the script and took some functions from the following scripts; JinxScript, Ryze Stand, Night LUA, Addict Script.") end)
 
--- Main loop of the script, second one is in net2.menu.refresh_profiles
+-- Main loop of the script.
 util.create_thread(function()
     repeat
         NET2.MENU.REFRESH_PROFILES(PLAYERS_LIST)
@@ -1440,5 +1443,3 @@ util.on_stop(function()
     nomodders = false
     NET2 = nil
 end)
-
-util.keep_running()
